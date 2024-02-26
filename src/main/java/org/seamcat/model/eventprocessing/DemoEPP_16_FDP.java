@@ -293,7 +293,10 @@ public class DemoEPP_16_FDP
         double max = Arrays.stream(data).max().getAsDouble();
 
         // Calculate bin width
-        double binWidth = (max - min) / numBins;
+        // results in negative fdp and integrate(I_N_bins, pdf_I_N, I_N_bins[0], I_N_bins[input.binNo() - 1]) < 1
+        //double binWidth = (max - min) / numBins;
+        //correction
+        double binWidth = (max - min) / (numBins-1);
 
         // Generate the bin values
         for (int i = 0; i < numBins; i++) {
