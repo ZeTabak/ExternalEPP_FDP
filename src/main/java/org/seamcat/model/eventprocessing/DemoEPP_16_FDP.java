@@ -32,6 +32,12 @@ public class DemoEPP_16_FDP
     public static final UniqueValueDef FRACTIONAL_DEGRADATION_PERFORMANCE_ST =
         results().uniqueValue("Fractional Degradation of Performance", "FDP - Short Term", Unit.percent, false);
 
+    // Adapt FDP values to vector for enable extracting results from CL in v5.5.0
+    // Will be removed in future
+    public static final VectorDef vector_FDP = results().vector("FDPVectors", "FDP_v", Unit.percent, true);
+    public static final VectorDef vector_FDP_LT = results().vector("FDPVectors", "FDP_LT_v", Unit.percent, true);
+    public static final VectorDef vector_FDP_ST = results().vector("FDPVectors", "FDP_ST_v", Unit.percent, true);
+
     // Intermediates for testing
     public static final UniqueValueDef PO = results().uniqueValue("Intermediates", "pO multipath occurrence factor", Unit.percent, true);
     public static final UniqueValueDef POO = results().uniqueValue("Intermediates", "POO (x 100)", Unit.percent, true);
@@ -89,7 +95,7 @@ public class DemoEPP_16_FDP
 
     @Override
     public Description description() {
-        return new DescriptionImpl("EPP 16: FDP - Fractional Degradation of Performance_v2.0",
+        return new DescriptionImpl("eEPP 16: FDP - Fractional Degradation of Performance_v2.0",
             "<html>This Event Processing Plugin calculates FDP for FS link with and without ATPC <br>"
                 + "It uses definition of FDP in ITU-R Recommendations F.1108, ITU-R F.758, and <br>"
                 + "calculates the fade probability based on ITU-R P.530-18 method for all percentages <br>"
@@ -258,6 +264,17 @@ public class DemoEPP_16_FDP
         results.addVectorResultType(new VectorResultType(vectorI_N, I_N));
         results.addVectorResultType(new VectorResultType(vector_pw, pw));
         // results.addVectorResultType(new VectorResultType(vectori_N_pdf, pdf_I_N));
+
+        // Adding FDP as vector results for easier extract in CommandLine in 5.5.0
+        // will be removed later on
+        double[] FDP_vect = new double[1];
+        double[] FDP_LT_vect = new double[1];
+        double[] FDP_ST_vect = new double[1];
+        FDP_vect[0] = FDP; FDP_LT_vect[0] = FDP_LT; FDP_ST_vect[0]=FDP_ST;
+        results.addVectorResultType(new VectorResultType(vector_FDP, FDP_vect));
+        results.addVectorResultType(new VectorResultType(vector_FDP_LT, FDP_LT_vect));
+        results.addVectorResultType(new VectorResultType(vector_FDP_ST, FDP_ST_vect));
+
     }
 
     public static double[] calculatePDF(double[] data, int numBins) {
