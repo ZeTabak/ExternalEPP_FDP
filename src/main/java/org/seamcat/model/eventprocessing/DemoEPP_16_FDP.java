@@ -1,10 +1,13 @@
 package main.java.org.seamcat.model.eventprocessing;
 
+import static org.seamcat.model.factory.Factory.in;
 import static org.seamcat.model.factory.Factory.results;
+import static org.seamcat.model.plugin.system.BuiltInSystem.*;
 
 import java.util.Arrays;
 import java.util.List;
 import org.seamcat.model.Scenario;
+import org.seamcat.model.factory.Factory;
 import org.seamcat.model.mathematics.Mathematics;
 import org.seamcat.model.plugin.Config;
 import org.seamcat.model.plugin.OptionalValue;
@@ -15,6 +18,7 @@ import org.seamcat.model.plugin.propagation.TerrainData;
 import org.seamcat.model.plugin.propagation.TerrainDataPoint;
 import org.seamcat.model.plugin.system.ConsistencyCheckContext;
 import org.seamcat.model.plugin.system.ContexedSystemPlugin;
+import org.seamcat.model.plugin.system.SystemPlugin;
 import org.seamcat.model.simulation.result.*;
 import org.seamcat.model.types.Description;
 import org.seamcat.model.types.Unit;
@@ -59,6 +63,7 @@ public class DemoEPP_16_FDP
     private double frequency; // frequency (GHz)
     private double d; // path length (km)
     private double longitudeMid, latitudeMid;
+    private double noiseFloor;
 
     public interface Input {
         @Config(order = 1, name = "Longitude of VSL path centre", unit = Unit.deg,
@@ -84,6 +89,8 @@ public class DemoEPP_16_FDP
         @Config(order = 4, name = "ATPC Range", toolTip = "Check only if VSL uses ATPC and define ATPC Range", unit = Unit.dB)
         OptionalValue<Double> atpcRange();
 
+        // No need for noiseFloor Input - get it from scenario (v.5.5.1 A2)
+        // needed for 5.5.0  - will be removed in future
         @Config(order = 6, name = "VLR Noise Floor", toolTip = "input Noise floor or the receiver",unit = Unit.dBm)
         double nFloor();
         double nFloor = -94.0;
@@ -91,7 +98,16 @@ public class DemoEPP_16_FDP
     }
 
     @Override
-    public void consistencyCheck(ConsistencyCheckContext context, Input input) {}
+    public void consistencyCheck(ConsistencyCheckContext context, Input input) {
+        Scenario scenario = context.getScenario();
+        SystemPlugin plugin = scenario.getVictim().getSystemPlugin();
+
+        boolean isValid = Factory.in(plugin, GENERIC);
+
+        if (!isValid) {
+            context.addError("Can only be applied if the victim system is a Generic System type");
+        }
+    }
 
     @Override
     public Description description() {
@@ -140,8 +156,9 @@ public class DemoEPP_16_FDP
                 longitudeMid = midCoordinateVLR[0];
                 latitudeMid = midCoordinateVLR[1];
             }
+            // needed for 5.5.0 - will be removed later on and replaced by commented line
             //noiseFloor= scenario.getVictim().getSystem().getReceiver().getNoiseFloor();
-
+            noiseFloor = input.nFloor();
         }
     }
 
@@ -158,7 +175,6 @@ public class DemoEPP_16_FDP
         int index; // index for determining division between LT and ST region
         boolean trigger = false;
         double FDP, FDP_LT, FDP_ST;
-        double noiseFloor;
 
         // for links with ATPC
         boolean triggerAtpc = false;
@@ -178,13 +194,6 @@ public class DemoEPP_16_FDP
         ContexedSystemPlugin victim = scenario.getVictim();
         VectorResultType iRSS_All = victimResults.findVector(victim.getIRSS_COMBINED());
         double[] iRSSUnwBloc = iRSS_All.value().asArray();
-
-        // Can not get in external EPP
-        // getting noise of VSL
-        //SystemModelGeneric ui = (SystemModelGeneric) victim.getSystemPlugin().getUI();
-        //noiseFloor = ui.receiver().receptionCharacteristics().noiseFloor();
-        noiseFloor = input.nFloor();
-
 
         // getting I/N (Z) of VSL in dB
         double[] I_N = Arrays.stream(iRSSUnwBloc).map(i -> i - noiseFloor).toArray();
