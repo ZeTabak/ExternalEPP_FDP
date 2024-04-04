@@ -96,7 +96,7 @@ public class P530v18MultipathFading {
         double pw;
         double p0, At, pt, qap, qt, qa;
 
-        // Stap 1 of 2.3.2
+        // Stap 1 of 2.3.2 multipath occurrence factor
         p0 = multipathFadingSingleFreq(he, hr, ht, frequency, d, 0.0);
 
         // Step 2

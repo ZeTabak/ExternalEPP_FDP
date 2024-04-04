@@ -1,6 +1,5 @@
 package main.java.org.seamcat.model.eventprocessing;
 
-import static org.seamcat.model.factory.Factory.in;
 import static org.seamcat.model.factory.Factory.results;
 import static org.seamcat.model.plugin.system.BuiltInSystem.*;
 
@@ -99,25 +98,44 @@ public class DemoEPP_16_FDP
 
     @Override
     public void consistencyCheck(ConsistencyCheckContext context, Input input) {
+        // longitude+- 180, latitude +- 90 +
+        // fMargin > 0 dB +
+        // binNo >1 +
+        // nFloor <0 dBm
+        if ((Math.abs( input.longitude())>180) || (Math.abs( input.latitude())>90)) {
+            context.addError("Coordinate of VSL path centre is outside valid range");
+        }
+
+        if (input.fMargin()>0) {
+            context.addError("Victim System Fading Margin is not valid (should be less than 0)");
+        }
+
+        if (!(input.binNo()>1)) {
+            context.addError("Number of calculation bins is not valid (should be greater than 1)");
+        }
+
         Scenario scenario = context.getScenario();
         SystemPlugin plugin = scenario.getVictim().getSystemPlugin();
 
         boolean isValid = Factory.in(plugin, GENERIC);
 
         if (!isValid) {
-            context.addError("Can only be applied if the victim system is a Generic System type");
+            context.addError("EPP for FDP calculation can only be applied to the Fixed Service victim system (Generic System type)");
         }
     }
 
     @Override
     public Description description() {
-        return new DescriptionImpl("eEPP 16: FDP - Fractional Degradation of Performance_v2.0",
+        return new DescriptionImpl("eEPP 16: FDP - Fractional Degradation of Performance_v1.4",
             "<html>This Event Processing Plugin calculates FDP for FS link with and without ATPC <br>"
                 + "It uses definition of FDP in ITU-R Recommendations F.1108, ITU-R F.758, and <br>"
                 + "calculates the fade probability based on ITU-R P.530-18 method for all percentages <br>"
                 + "of time according to 2.3.2 and methodology derived by WGSE SE19 SE19(23)042A05 <br>"
+                + "if terrain data is available Longitude and latitude of the link mid point, heights <br>"
+                + "of Tx and Rx antenna and terrain height are taken from terrain profile, otherwise <br>"
+                + "these values are taken from inputs<br>"
                 + "ver 1.0 (Dec 2023) - first implementation of FDP calculations <br>"
-                + "ver 2.0 (Feb 2024) - added terrain feature in calculations and multipath occurrence factor to results</html>");
+                + "ver 2.0 (XX 2024) - added terrain feature in calculations and multipath occurrence factor to results, implementation Annex 2 for ATPC</html>");
     }
 
     @Override
@@ -136,6 +154,7 @@ public class DemoEPP_16_FDP
             longitudeMid = input.longitude();
             latitudeMid = input.latitude();
 
+            // initialisation of variables if there is terrain data;
             TerrainData data = VictimLinkResult.getTerrainData();
             if (data != null) {
                 // extracting terrain profile data (height) and calculating heights
@@ -164,25 +183,27 @@ public class DemoEPP_16_FDP
 
     @Override
     public void postProcess(Input input, Scenario scenario, Results results, SimulationResult simResult) {
-        double p0, p00, p0I, p0I_LT, p0I_ST;
+        double p00, p0I, p0I_LT, p0I_ST;
         double z; // i/n  in lin domain
         double FMdeg; // FM degradation due to interference
         // double pw;      // Multipath fading percentage - percentage of time that the fade depth A is
         //                 // exceeded in the average worst month
+        double p0; //  Multipath occurrence factor ITU-R P.530 Ch 2.3.2 (11)
         double[] pw; // Multipath fading percentage - percentage of time that the fade depth A is
-        // exceeded in the average worst month
+        // exceeded in the average worst month ITU-R P.530 Ch 2.3.2 (17)
         double gamma; // correction factor for LS & ST
         int index; // index for determining division between LT and ST region
         boolean trigger = false;
         double FDP, FDP_LT, FDP_ST;
+        double desensitisation; // noise rise 10log(1+z)
 
         // for links with ATPC
         boolean triggerAtpc = false;
         double atpcRange;
-        double NFM = 0;
-        double desensitisation; // noise rise 10log(1+z)
+        double FM, NFM = 0;
         int indexAtpc; // index for determining ST region in ATPC
 
+        FM = input.fMargin();
         // calculate NFM for links with ATPC
         if (input.atpcRange().isRelevant()) {
             atpcRange = input.atpcRange().getValue();
@@ -198,7 +219,7 @@ public class DemoEPP_16_FDP
         // getting I/N (Z) of VSL in dB
         double[] I_N = Arrays.stream(iRSSUnwBloc).map(i -> i - noiseFloor).toArray();
 
-        // pdf of I/N
+        // pdf of I/N and bin values dB
         double[] pdf_I_N = calculatePDF(I_N, input.binNo());
         double[] I_N_bins = calculateBinValues(I_N, input.binNo());
 
@@ -207,9 +228,11 @@ public class DemoEPP_16_FDP
 
         // Initialise PMP P.530v18 and get geo-climatic factor per link
         P530v18MultipathFading p530v18MultipathFading = new P530v18MultipathFading(longitudeMid, latitudeMid);
+        // Multipath occurrence factor
         p0 = p530v18MultipathFading.multipathFadingSingleFreq(he, hr, ht, frequency, d, 0.0);
 
         // p00 probability of outage due to fading only; p530v18MultipathFading calculates in percent
+        // ToDo does it go NFM instead FM in Ann 2 ? check everywhere for input.fMargin()
         p00 = p530v18MultipathFading.multipathFading(he, hr, ht, frequency, d, input.fMargin()) / 100;
         p0I = p00; // initialisation
 
@@ -239,13 +262,16 @@ public class DemoEPP_16_FDP
         // integration to determine probability of outage from fading and interference p0I, p0I_LT, p0I_ST and
         // correction factor gamma
         p0I_LT = integrate(I_N_bins, weightedFading, I_N_bins[0], I_N_bins[index]);
-        gamma = integrate(I_N_bins, pdf_I_N, I_N_bins[index], I_N_bins[input.binNo() - 1]);
+        // adjustment for ATPC
+        // gamma = integrate(I_N_bins, pdf_I_N, I_N_bins[index], I_N_bins[input.binNo() - 1]);
 
         if (input.atpcRange().isRelevant()) {
             p0I_ST = integrate(I_N_bins, pdf_I_N, I_N_bins[indexAtpc], I_N_bins[input.binNo() - 1]);
+            gamma = integrate(I_N_bins, pdf_I_N, I_N_bins[indexAtpc], I_N_bins[input.binNo() - 1]);
         } else {
             p0I = integrate(I_N_bins, weightedFading, I_N_bins[0], I_N_bins[input.binNo() - 1]);
             p0I_ST = integrate(I_N_bins, weightedFading, I_N_bins[index], I_N_bins[input.binNo() - 1]);
+            gamma = integrate(I_N_bins, pdf_I_N, I_N_bins[index], I_N_bins[input.binNo() - 1]);
         }
 
         // applying correction factor
@@ -271,7 +297,7 @@ public class DemoEPP_16_FDP
         results.addSingleValueType(
             new DoubleResultType(IN_ST, Mathematics.linear2dB(Mathematics.dB2Linear(input.fMargin()) - 1)));
         results.addVectorResultType(new VectorResultType(vectorI_N, I_N));
-        results.addVectorResultType(new VectorResultType(vector_pw, pw));
+        //results.addVectorResultType(new VectorResultType(vector_pw, pw));
         // results.addVectorResultType(new VectorResultType(vectori_N_pdf, pdf_I_N));
 
         // Adding FDP as vector results for easier extract in CommandLine in 5.5.0
@@ -356,8 +382,8 @@ public class DemoEPP_16_FDP
         }
         // Trapezoidal rule
         for (int i = indexA; i < indexB; i++) {
-            double h = x[i + 1] - x[i];
-            double area = (fx[i] + fx[i + 1]) * h / 2.0;
+            double deltaX = x[i + 1] - x[i];
+            double area = (fx[i] + fx[i + 1]) * deltaX / 2.0;
             integral += area;
         }
         return integral;
