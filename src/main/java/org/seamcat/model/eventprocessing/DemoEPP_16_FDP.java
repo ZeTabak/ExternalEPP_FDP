@@ -106,8 +106,8 @@ public class DemoEPP_16_FDP
             context.addError("Coordinate of VSL path centre is outside valid range");
         }
 
-        if (input.fMargin()>0) {
-            context.addError("Victim System Fading Margin is not valid (should be less than 0)");
+        if (!(input.fMargin()>0)) {
+            context.addError("Victim System Fading Margin is not valid (should be greater than 0)");
         }
 
         if (!(input.binNo()>1)) {
@@ -196,6 +196,7 @@ public class DemoEPP_16_FDP
         boolean trigger = false;
         double FDP, FDP_LT, FDP_ST;
         double desensitisation; // noise rise 10log(1+z)
+        double I_N_st_dB;
 
         // for links with ATPC
         boolean triggerAtpc = false;
@@ -232,7 +233,6 @@ public class DemoEPP_16_FDP
         p0 = p530v18MultipathFading.multipathFadingSingleFreq(he, hr, ht, frequency, d, 0.0);
 
         // p00 probability of outage due to fading only; p530v18MultipathFading calculates in percent
-        // ToDo does it go NFM instead FM in Ann 2 ? check everywhere for input.fMargin()
         p00 = p530v18MultipathFading.multipathFading(he, hr, ht, frequency, d, input.fMargin()) / 100;
         p0I = p00; // initialisation
 
@@ -268,10 +268,13 @@ public class DemoEPP_16_FDP
         if (input.atpcRange().isRelevant()) {
             p0I_ST = integrate(I_N_bins, pdf_I_N, I_N_bins[indexAtpc], I_N_bins[input.binNo() - 1]);
             gamma = integrate(I_N_bins, pdf_I_N, I_N_bins[indexAtpc], I_N_bins[input.binNo() - 1]);
+            I_N_st_dB= Mathematics.linear2dB(Mathematics.dB2Linear(NFM) - 1);
+            p0I = p0I_LT + p0I_ST;
         } else {
             p0I = integrate(I_N_bins, weightedFading, I_N_bins[0], I_N_bins[input.binNo() - 1]);
             p0I_ST = integrate(I_N_bins, weightedFading, I_N_bins[index], I_N_bins[input.binNo() - 1]);
             gamma = integrate(I_N_bins, pdf_I_N, I_N_bins[index], I_N_bins[input.binNo() - 1]);
+            I_N_st_dB = Mathematics.linear2dB(Mathematics.dB2Linear(input.fMargin()) - 1);
         }
 
         // applying correction factor
@@ -295,7 +298,7 @@ public class DemoEPP_16_FDP
         results.addSingleValueType(new DoubleResultType(POI_ST, p0I_ST * 100));
         results.addSingleValueType(new DoubleResultType(Gamma, gamma * 100));
         results.addSingleValueType(
-            new DoubleResultType(IN_ST, Mathematics.linear2dB(Mathematics.dB2Linear(input.fMargin()) - 1)));
+            new DoubleResultType(IN_ST, I_N_st_dB));
         results.addVectorResultType(new VectorResultType(vectorI_N, I_N));
         //results.addVectorResultType(new VectorResultType(vector_pw, pw));
         // results.addVectorResultType(new VectorResultType(vectori_N_pdf, pdf_I_N));
