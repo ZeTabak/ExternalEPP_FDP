@@ -4,7 +4,10 @@ import static org.seamcat.model.factory.Factory.results;
 import static org.seamcat.model.plugin.system.BuiltInSystem.*;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import org.seamcat.model.Scenario;
 import org.seamcat.model.factory.Factory;
 import org.seamcat.model.mathematics.Mathematics;
@@ -28,34 +31,6 @@ import org.seamcat.model.types.result.VectorResultType;
 
 public class DemoEPP_16_FDP
     implements EventProcessingPlugin<DemoEPP_16_FDP.Input>, EventProcessingPostProcessor<DemoEPP_16_FDP.Input> {
-    public static final UniqueValueDef FRACTIONAL_DEGRADATION_PERFORMANCE =
-        results().uniqueValue("Fractional Degradation of Performance", "FDP", Unit.percent, false);
-    public static final UniqueValueDef FRACTIONAL_DEGRADATION_PERFORMANCE_LT =
-        results().uniqueValue("Fractional Degradation of Performance", "FDP - Long Term", Unit.percent, false);
-    public static final UniqueValueDef FRACTIONAL_DEGRADATION_PERFORMANCE_ST =
-        results().uniqueValue("Fractional Degradation of Performance", "FDP - Short Term", Unit.percent, false);
-
-    // Adapt FDP values to vector for enable extracting results from CL in v5.5.0
-    // Will be removed in future
-    public static final VectorDef vector_FDP = results().vector("FDPVectors", "FDP_v", Unit.percent, true);
-    public static final VectorDef vector_FDP_LT = results().vector("FDPVectors", "FDP_LT_v", Unit.percent, true);
-    public static final VectorDef vector_FDP_ST = results().vector("FDPVectors", "FDP_ST_v", Unit.percent, true);
-
-    // Intermediates for testing
-    public static final UniqueValueDef PO = results().uniqueValue("Intermediates", "pO multipath occurrence factor", Unit.percent, true);
-    public static final UniqueValueDef POO = results().uniqueValue("Intermediates", "POO (x 100)", Unit.percent, true);
-    public static final UniqueValueDef P0I = results().uniqueValue("Intermediates", "POI (x 100)", Unit.percent, true);
-    public static final UniqueValueDef POI_ST =
-        results().uniqueValue("Intermediates", "POI_ST (x 100)", Unit.percent, true);
-    public static final UniqueValueDef POI_LT =
-        results().uniqueValue("Intermediates", "POI_LT (x 100)", Unit.percent, true);
-    public static final UniqueValueDef Gamma =
-        results().uniqueValue("Intermediates", "gamma (x 100)", Unit.percent, true);
-    public static final UniqueValueDef IN_ST = results().uniqueValue("Intermediates", "I/N st", Unit.dB, true);
-    public static final VectorDef vectorI_N = results().vector("Vectors", "I/N", Unit.dB, true);
-    public static final VectorDef vector_pw =
-        results().vector("Vectors", "Multipath fading percentage", Unit.percent, true);
-    //public static final VectorDef vectori_N_pdf = results().vector("Vectors", "I/N pdf", Unit.none, true);
 
     private double he, hr; // antenna height (m) of Tx and Rx
     private double ht; // terrain height
@@ -98,27 +73,19 @@ public class DemoEPP_16_FDP
 
     @Override
     public void consistencyCheck(ConsistencyCheckContext context, Input input) {
-        // longitude+- 180, latitude +- 90 +
-        // fMargin > 0 dB +
-        // binNo >1 +
-        // nFloor <0 dBm
         if ((Math.abs( input.longitude())>180) || (Math.abs( input.latitude())>90)) {
             context.addError("Coordinate of VSL path centre is outside valid range");
         }
-
         if (!(input.fMargin()>0)) {
             context.addError("Victim System Fading Margin is not valid (should be greater than 0)");
         }
-
         if (!(input.binNo()>1)) {
             context.addError("Number of calculation bins is not valid (should be greater than 1)");
         }
 
         Scenario scenario = context.getScenario();
         SystemPlugin plugin = scenario.getVictim().getSystemPlugin();
-
         boolean isValid = Factory.in(plugin, GENERIC);
-
         if (!isValid) {
             context.addError("EPP for FDP calculation can only be applied to the Fixed Service victim system (Generic System type)");
         }
@@ -126,7 +93,7 @@ public class DemoEPP_16_FDP
 
     @Override
     public Description description() {
-        return new DescriptionImpl("eEPP 16: FDP - Fractional Degradation of Performance_v1.4",
+        return new DescriptionImpl("eEPP 16: FDP - Fractional Degradation of Performance_v1.5",
             "<html>This Event Processing Plugin calculates FDP for FS link with and without ATPC <br>"
                 + "It uses definition of FDP in ITU-R Recommendations F.1108, ITU-R F.758, and <br>"
                 + "calculates the fade probability based on ITU-R P.530-18 method for all percentages <br>"
@@ -146,8 +113,7 @@ public class DemoEPP_16_FDP
             d = VictimLinkResult.getTxRxDistance(); // in km
 
             // initialisation of variables if there is no terrain;
-            // he, hr = height of antenna; ht = terrain height = 0
-            // Longitude and latitude from input
+            // he, hr = height of antenna; ht = terrain height = 0; longitude and latitude from UI input
             he = VictimLinkResult.txAntenna().getHeight();
             hr = VictimLinkResult.rxAntenna().getHeight();
             ht = 0;
@@ -183,26 +149,39 @@ public class DemoEPP_16_FDP
 
     @Override
     public void postProcess(Input input, Scenario scenario, Results results, SimulationResult simResult) {
-        double p00, p0I, p0I_LT, p0I_ST;
-        double z; // i/n  in lin domain
-        double FMdeg; // FM degradation due to interference
-        // double pw;      // Multipath fading percentage - percentage of time that the fade depth A is
-        //                 // exceeded in the average worst month
+        // create single values and vectors using Result Factory for collecting results
+        UniqueValueDef FRACTIONAL_DEGRADATION_PERFORMANCE =
+                results().uniqueValue("Fractional Degradation of Performance", "FDP", Unit.percent, false);
+        UniqueValueDef FRACTIONAL_DEGRADATION_PERFORMANCE_LT =
+                results().uniqueValue("Fractional Degradation of Performance", "FDP - Long Term", Unit.percent, false);
+        UniqueValueDef FRACTIONAL_DEGRADATION_PERFORMANCE_ST =
+                results().uniqueValue("Fractional Degradation of Performance", "FDP - Short Term", Unit.percent, false);
+
+        // Adapt FDP values to vector for enable extracting results from CL in v5.5.0
+        // Will be removed in future
+        VectorDef vector_FDP = results().vector("FDPVectors", "FDP_v", Unit.percent, true);
+        VectorDef vector_FDP_LT = results().vector("FDPVectors", "FDP_LT_v", Unit.percent, true);
+        VectorDef vector_FDP_ST = results().vector("FDPVectors", "FDP_ST_v", Unit.percent, true);
+
+        // Intermediates for testing
+        UniqueValueDef PO = results().uniqueValue("Intermediates", "pO multipath occurrence factor", Unit.percent, true);
+        UniqueValueDef POO = results().uniqueValue("Intermediates", "POO (x 100)", Unit.percent, true);
+        UniqueValueDef P0I = results().uniqueValue("Intermediates", "POI (x 100)", Unit.percent, true);
+        UniqueValueDef POI_ST =
+                results().uniqueValue("Intermediates", "POI_ST (x 100)", Unit.percent, true);
+        UniqueValueDef POI_LT =
+                results().uniqueValue("Intermediates", "POI_LT (x 100)", Unit.percent, true);
+        UniqueValueDef Gamma =
+                results().uniqueValue("Intermediates", "gamma (x 100)", Unit.percent, true);
+        UniqueValueDef IN_ST = results().uniqueValue("Intermediates", "I/N st", Unit.dB, true);
+        VectorDef vectorI_N = results().vector("Vectors", "I/N", Unit.dB, true);
+        //VectorDef vector_pw = results().vector("Vectors", "Multipath fading percentage", Unit.percent, true);
+        //public static final VectorDef vectori_N_pdf = results().vector("Vectors", "I/N pdf", Unit.none, true);
+
         double p0; //  Multipath occurrence factor ITU-R P.530 Ch 2.3.2 (11)
         double[] pw; // Multipath fading percentage - percentage of time that the fade depth A is
-        // exceeded in the average worst month ITU-R P.530 Ch 2.3.2 (17)
-        double gamma; // correction factor for LS & ST
-        int index; // index for determining division between LT and ST region
-        boolean trigger = false;
-        double FDP, FDP_LT, FDP_ST;
-        double desensitisation; // noise rise 10log(1+z)
-        double I_N_st_dB;
-
-        // for links with ATPC
-        boolean triggerAtpc = false;
-        double atpcRange;
+         double atpcRange;
         double FM, NFM = 0;
-        int indexAtpc; // index for determining ST region in ATPC
 
         FM = input.fMargin();
         // calculate NFM for links with ATPC
@@ -224,57 +203,122 @@ public class DemoEPP_16_FDP
         double[] pdf_I_N = calculatePDF(I_N, input.binNo());
         double[] I_N_bins = calculateBinValues(I_N, input.binNo());
 
-        double[] weightedFading = new double[I_N_bins.length];
-        pw = new double[I_N_bins.length];
-
         // Initialise PMP P.530v18 and get geo-climatic factor per link
         P530v18MultipathFading p530v18MultipathFading = new P530v18MultipathFading(longitudeMid, latitudeMid);
         // Multipath occurrence factor
         p0 = p530v18MultipathFading.multipathFadingSingleFreq(he, hr, ht, frequency, d, 0.0);
 
+        double ATPCRange = (input.atpcRange().isRelevant()) ? input.atpcRange().getValue() : 0;
+
+        // Calculate FDP & collect all results in map
+        Map<String, Double> resultsFDP = calculateFDP(he, hr, ht, frequency, d, input.fMargin(), input.atpcRange().isRelevant(), ATPCRange, input.binNo(), p530v18MultipathFading, pdf_I_N, I_N_bins);
+
+        // Collecting results of EPP
+        // Collecting main results
+        results.addSingleValueType(new DoubleResultType(FRACTIONAL_DEGRADATION_PERFORMANCE, resultsFDP.get("FDP")));
+        results.addSingleValueType(new DoubleResultType(FRACTIONAL_DEGRADATION_PERFORMANCE_LT, resultsFDP.get("FDP_LT")));
+        results.addSingleValueType(new DoubleResultType(FRACTIONAL_DEGRADATION_PERFORMANCE_ST, resultsFDP.get("FDP_ST")));
+
+        // Collecting Intermediate values for testing
+        results.addSingleValueType(new DoubleResultType(PO, p0));
+        results.addSingleValueType(new DoubleResultType(POO, resultsFDP.get("P00") * 100));
+        results.addSingleValueType(new DoubleResultType(P0I, resultsFDP.get("P0I")  * 100));
+        results.addSingleValueType(new DoubleResultType(POI_LT, resultsFDP.get("P0I_LT")  * 100));
+        results.addSingleValueType(new DoubleResultType(POI_ST, resultsFDP.get("P0I_ST")  * 100));
+        results.addSingleValueType(new DoubleResultType(Gamma, resultsFDP.get("Gamma")  * 100));
+        results.addSingleValueType(new DoubleResultType(IN_ST, resultsFDP.get("IN_ST")));
+        results.addVectorResultType(new VectorResultType(vectorI_N, I_N));
+        //results.addVectorResultType(new VectorResultType(vector_pw, pw));
+        //results.addVectorResultType(new VectorResultType(vectori_N_pdf, pdf_I_N));
+
+        // Adding FDP as vector results for easier extract in CommandLine in 5.5.0
+        // will be removed later on
+        double[] FDP_vect = new double[1];
+        double[] FDP_LT_vect = new double[1];
+        double[] FDP_ST_vect = new double[1];
+        FDP_vect[0] = resultsFDP.get("FDP"); FDP_LT_vect[0] =resultsFDP.get("FDP_LT"); FDP_ST_vect[0]=resultsFDP.get("FDP_ST");
+        results.addVectorResultType(new VectorResultType(vector_FDP, FDP_vect));
+        results.addVectorResultType(new VectorResultType(vector_FDP_LT, FDP_LT_vect));
+        results.addVectorResultType(new VectorResultType(vector_FDP_ST, FDP_ST_vect));
+    }
+
+    protected Map<String, Double> calculateFDP (double he, double hr, double ht, double frequency, double d, double fMargin, boolean ATPCisRelevant, double atpcRange, int binNo, P530v18MultipathFading p530v18MultipathFading, double[] pdf_I_N, double[] I_N_bins ){
+
+        double FDP, FDP_LT, FDP_ST;
+        double p00, p0I, p0I_LT, p0I_ST;
+        double z; // i/n  in lin domain
+        double desensitisation; // noise rise 10log(1+z)
+        double I_N_st_dB;
+        int index; // index for determining division between LT and ST region
+
+        double FMdeg; // FM degradation due to interference = fMargin - desensitisation
+        double[] pw; // Multipath fading percentage - percentage of time that the fade depth A is
+                     // exceeded in the average worst month ITU-R P.530 Ch 2.3.2 (17)
+        double[] weightedFading;
+        boolean trigger; // trigger for determining transition between LT and ST in Annex 1
+        double gamma; // correction factor for LS & ST
+        double FM;
+
+        // for links with ATPC
+        boolean triggerAtpc; // trigger for determining transition between LT and ST in Annex 2 (with ATPC)
+        double NFM = 0;
+        int indexAtpc; // index for determining ST region in ATPC
+
+        // Result collector
+        Map<String, Double> results = new HashMap<>();
+
+        pw = new double[I_N_bins.length];
+        weightedFading = new double[I_N_bins.length];
+
+        FM = fMargin;
+        // calculate NFM for links with ATPC
+        if (ATPCisRelevant) {
+            NFM = fMargin - atpcRange;
+        }
+
+        double p0 = p530v18MultipathFading.multipathFadingSingleFreq(he, hr, ht, frequency, d, 0.0);
         // p00 probability of outage due to fading only; p530v18MultipathFading calculates in percent
-        p00 = p530v18MultipathFading.multipathFading(he, hr, ht, frequency, d, input.fMargin()) / 100;
+        p00 = p530v18MultipathFading.multipathFading(he, hr, ht, frequency, d, fMargin) / 100;
         p0I = p00; // initialisation
 
-        index = input.binNo() - 1;
-        indexAtpc = input.binNo() - 1;
+        index = binNo - 1; trigger = false;
+        indexAtpc = binNo - 1; triggerAtpc = false;
 
-        for (int i = 0; i < input.binNo(); i++) {
+        for (int i = 0; i < binNo; i++) {
             z = Mathematics.dB2Linear(I_N_bins[i]);
+            // z = (I_N_bins[i]); if using linear i/n
             desensitisation = Mathematics.linear2dB(1 + z);
-            FMdeg = input.fMargin() - desensitisation;
+            FMdeg = fMargin - desensitisation;
 
             pw[i] = p530v18MultipathFading.multipathFading(he, hr, ht, frequency, d, FMdeg) / 100;
             weightedFading[i] = pdf_I_N[i] * pw[i];
 
             // determine index for distinction between LT and ST without ATPC
-            if (!trigger && z >= Mathematics.dB2Linear(input.fMargin()) - 1) {
+            if (!trigger && z >= Mathematics.dB2Linear(fMargin) - 1) {
                 index = i;
                 trigger = true;
             }
             // determine index for ST with ATPC
-            if (!triggerAtpc && input.atpcRange().isRelevant() && desensitisation >= NFM) {
+            if (!triggerAtpc && ATPCisRelevant && desensitisation >= NFM) {
                 indexAtpc = i;
                 triggerAtpc = true;
             }
         }
-
         // integration to determine probability of outage from fading and interference p0I, p0I_LT, p0I_ST and
-        // correction factor gamma
         p0I_LT = integrate(I_N_bins, weightedFading, I_N_bins[0], I_N_bins[index]);
-        // adjustment for ATPC
-        // gamma = integrate(I_N_bins, pdf_I_N, I_N_bins[index], I_N_bins[input.binNo() - 1]);
 
-        if (input.atpcRange().isRelevant()) {
-            p0I_ST = integrate(I_N_bins, pdf_I_N, I_N_bins[indexAtpc], I_N_bins[input.binNo() - 1]);
-            gamma = integrate(I_N_bins, pdf_I_N, I_N_bins[indexAtpc], I_N_bins[input.binNo() - 1]);
-            I_N_st_dB= Mathematics.linear2dB(Mathematics.dB2Linear(NFM) - 1);
+        // Annex 2 - ATPC
+        if (ATPCisRelevant) {
+            p0I_ST = integrate(I_N_bins, pdf_I_N, I_N_bins[indexAtpc], I_N_bins[binNo - 1]);
             p0I = p0I_LT + p0I_ST;
+            gamma = integrate(I_N_bins, pdf_I_N, I_N_bins[indexAtpc], I_N_bins[binNo - 1]);
+            I_N_st_dB= Mathematics.linear2dB(Mathematics.dB2Linear(NFM) - 1);
+        // Annex 1 - No ATPC
         } else {
-            p0I = integrate(I_N_bins, weightedFading, I_N_bins[0], I_N_bins[input.binNo() - 1]);
-            p0I_ST = integrate(I_N_bins, weightedFading, I_N_bins[index], I_N_bins[input.binNo() - 1]);
-            gamma = integrate(I_N_bins, pdf_I_N, I_N_bins[index], I_N_bins[input.binNo() - 1]);
-            I_N_st_dB = Mathematics.linear2dB(Mathematics.dB2Linear(input.fMargin()) - 1);
+            p0I = integrate(I_N_bins, weightedFading, I_N_bins[0], I_N_bins[binNo - 1]);
+            p0I_ST = integrate(I_N_bins, weightedFading, I_N_bins[index], I_N_bins[binNo - 1]);
+            gamma = integrate(I_N_bins, pdf_I_N, I_N_bins[index], I_N_bins[binNo - 1]);
+            I_N_st_dB = Mathematics.linear2dB(Mathematics.dB2Linear(fMargin) - 1);
         }
 
         // applying correction factor
@@ -284,35 +328,19 @@ public class DemoEPP_16_FDP
         // calculating FDP in percent
         FDP_LT = ((p0I_LT / p00 - 1)) * 100;
         FDP_ST = ((p0I_ST / p00 - 1)) * 100;
-        FDP = (input.atpcRange().isRelevant()) ? FDP_LT + FDP_ST : (p0I / p00 - 1) * 100;
+        FDP = (ATPCisRelevant) ? FDP_LT + FDP_ST : (p0I / p00 - 1) * 100;
 
-        results.addSingleValueType(new DoubleResultType(FRACTIONAL_DEGRADATION_PERFORMANCE, FDP));
-        results.addSingleValueType(new DoubleResultType(FRACTIONAL_DEGRADATION_PERFORMANCE_LT, FDP_LT));
-        results.addSingleValueType(new DoubleResultType(FRACTIONAL_DEGRADATION_PERFORMANCE_ST, FDP_ST));
-
-        // Collecting Intermediate values for testing
-        results.addSingleValueType(new DoubleResultType(PO, p0));
-        results.addSingleValueType(new DoubleResultType(POO, p00 * 100));
-        results.addSingleValueType(new DoubleResultType(P0I, p0I * 100));
-        results.addSingleValueType(new DoubleResultType(POI_LT, p0I_LT * 100));
-        results.addSingleValueType(new DoubleResultType(POI_ST, p0I_ST * 100));
-        results.addSingleValueType(new DoubleResultType(Gamma, gamma * 100));
-        results.addSingleValueType(
-            new DoubleResultType(IN_ST, I_N_st_dB));
-        results.addVectorResultType(new VectorResultType(vectorI_N, I_N));
-        //results.addVectorResultType(new VectorResultType(vector_pw, pw));
-        // results.addVectorResultType(new VectorResultType(vectori_N_pdf, pdf_I_N));
-
-        // Adding FDP as vector results for easier extract in CommandLine in 5.5.0
-        // will be removed later on
-        double[] FDP_vect = new double[1];
-        double[] FDP_LT_vect = new double[1];
-        double[] FDP_ST_vect = new double[1];
-        FDP_vect[0] = FDP; FDP_LT_vect[0] = FDP_LT; FDP_ST_vect[0]=FDP_ST;
-        results.addVectorResultType(new VectorResultType(vector_FDP, FDP_vect));
-        results.addVectorResultType(new VectorResultType(vector_FDP_LT, FDP_LT_vect));
-        results.addVectorResultType(new VectorResultType(vector_FDP_ST, FDP_ST_vect));
-
+        // collecting results
+        results.put("FDP", FDP);
+        results.put("FDP_LT", FDP_LT);
+        results.put("FDP_ST", FDP_ST);
+        results.put("P00", p00);
+        results.put("P0I", p0I);
+        results.put("P0I_LT", p0I_LT);
+        results.put("P0I_ST", p0I_ST);
+        results.put("Gamma", gamma);
+        results.put("IN_ST", I_N_st_dB);
+        return results;
     }
 
     public static double[] calculatePDF(double[] data, int numBins) {
@@ -323,7 +351,8 @@ public class DemoEPP_16_FDP
         double max = Arrays.stream(data).max().getAsDouble();
 
         // Calculate bin width
-        double binWidth = (max - min) / (numBins);
+        //double binWidth = (max - min) / (numBins);
+        double binWidth = (max - min) / (numBins-1);
 
         // Count data points in each bin
         for (Double value : data) {
