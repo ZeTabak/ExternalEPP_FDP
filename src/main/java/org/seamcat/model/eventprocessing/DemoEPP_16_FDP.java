@@ -24,10 +24,7 @@ import org.seamcat.model.plugin.system.SystemPlugin;
 import org.seamcat.model.simulation.result.*;
 import org.seamcat.model.types.Description;
 import org.seamcat.model.types.Unit;
-import org.seamcat.model.types.result.DescriptionImpl;
-import org.seamcat.model.types.result.DoubleResultType;
-import org.seamcat.model.types.result.Results;
-import org.seamcat.model.types.result.VectorResultType;
+import org.seamcat.model.types.result.*;
 
 public class DemoEPP_16_FDP
     implements EventProcessingPlugin<DemoEPP_16_FDP.Input>, EventProcessingPostProcessor<DemoEPP_16_FDP.Input> {
@@ -174,21 +171,14 @@ public class DemoEPP_16_FDP
         UniqueValueDef Gamma =
                 results().uniqueValue("Intermediates", "gamma (x 100)", Unit.percent, true);
         UniqueValueDef IN_ST = results().uniqueValue("Intermediates", "I/N st", Unit.dB, true);
+        UniqueValueDef Test = results().uniqueValue("Intermediates", "Test", Unit.none, true);
         VectorDef vectorI_N = results().vector("Vectors", "I/N", Unit.dB, true);
         //VectorDef vector_pw = results().vector("Vectors", "Multipath fading percentage", Unit.percent, true);
         //public static final VectorDef vectori_N_pdf = results().vector("Vectors", "I/N pdf", Unit.none, true);
 
         double p0; //  Multipath occurrence factor ITU-R P.530 Ch 2.3.2 (11)
         double[] pw; // Multipath fading percentage - percentage of time that the fade depth A is
-         double atpcRange;
-        double FM, NFM = 0;
-
-        FM = input.fMargin();
-        // calculate NFM for links with ATPC
-        if (input.atpcRange().isRelevant()) {
-            atpcRange = input.atpcRange().getValue();
-            NFM = input.fMargin() - atpcRange;
-        }
+        String test = "True";
 
         // getting iRSS all of VSL
         Results victimResults = simResult.getVictimResults();
@@ -214,20 +204,28 @@ public class DemoEPP_16_FDP
         Map<String, Double> resultsFDP = calculateFDP(he, hr, ht, frequency, d, input.fMargin(), input.atpcRange().isRelevant(), ATPCRange, input.binNo(), p530v18MultipathFading, pdf_I_N, I_N_bins);
 
         // Collecting results of EPP
+        // Ensuring FDP is not less than zero
+        if (resultsFDP.getOrDefault("FDP", 0.0) < 0.0 ||
+                resultsFDP.getOrDefault("FDP_LT", 0.0) < 0.0 ||
+                resultsFDP.getOrDefault("FDP_ST", 0.0) < 0.0) {
+            resultsFDP.replaceAll((key, value) -> Math.max(value, 0.0));
+        }
+
         // Collecting main results
-        results.addSingleValueType(new DoubleResultType(FRACTIONAL_DEGRADATION_PERFORMANCE, resultsFDP.get("FDP")));
-        results.addSingleValueType(new DoubleResultType(FRACTIONAL_DEGRADATION_PERFORMANCE_LT, resultsFDP.get("FDP_LT")));
-        results.addSingleValueType(new DoubleResultType(FRACTIONAL_DEGRADATION_PERFORMANCE_ST, resultsFDP.get("FDP_ST")));
+        results.addSingleValueType(new DoubleResultType(FRACTIONAL_DEGRADATION_PERFORMANCE, resultsFDP.getOrDefault("FDP", 0.0)));
+        results.addSingleValueType(new DoubleResultType(FRACTIONAL_DEGRADATION_PERFORMANCE_LT, resultsFDP.getOrDefault("FDP_LT", 0.0)));
+        results.addSingleValueType(new DoubleResultType(FRACTIONAL_DEGRADATION_PERFORMANCE_ST, resultsFDP.getOrDefault("FDP_ST", 0.0)));
 
         // Collecting Intermediate values for testing
         results.addSingleValueType(new DoubleResultType(PO, p0));
-        results.addSingleValueType(new DoubleResultType(POO, resultsFDP.get("P00") * 100));
-        results.addSingleValueType(new DoubleResultType(P0I, resultsFDP.get("P0I")  * 100));
-        results.addSingleValueType(new DoubleResultType(POI_LT, resultsFDP.get("P0I_LT")  * 100));
-        results.addSingleValueType(new DoubleResultType(POI_ST, resultsFDP.get("P0I_ST")  * 100));
-        results.addSingleValueType(new DoubleResultType(Gamma, resultsFDP.get("Gamma")  * 100));
+        results.addSingleValueType(new DoubleResultType(POO, resultsFDP.getOrDefault("P00", 0.0) * 100));
+        results.addSingleValueType(new DoubleResultType(P0I, resultsFDP.getOrDefault("P0I", 0.0)  * 100));
+        results.addSingleValueType(new DoubleResultType(POI_LT, resultsFDP.getOrDefault("P0I_LT", 0.0)  * 100));
+        results.addSingleValueType(new DoubleResultType(POI_ST, resultsFDP.getOrDefault("P0I_ST", 0.0)  * 100));
+        results.addSingleValueType(new DoubleResultType(Gamma, resultsFDP.getOrDefault("Gamma", 0.0)  * 100));
         results.addSingleValueType(new DoubleResultType(IN_ST, resultsFDP.get("IN_ST")));
         results.addVectorResultType(new VectorResultType(vectorI_N, I_N));
+        results.addSingleValueType(new StringResultType(Test, test));
         //results.addVectorResultType(new VectorResultType(vector_pw, pw));
         //results.addVectorResultType(new VectorResultType(vectori_N_pdf, pdf_I_N));
 
@@ -242,6 +240,7 @@ public class DemoEPP_16_FDP
         results.addVectorResultType(new VectorResultType(vector_FDP_ST, FDP_ST_vect));
     }
 
+    // Method for calculating FDP
     protected Map<String, Double> calculateFDP (double he, double hr, double ht, double frequency, double d, double fMargin, boolean ATPCisRelevant, double atpcRange, int binNo, P530v18MultipathFading p530v18MultipathFading, double[] pdf_I_N, double[] I_N_bins ){
 
         double FDP, FDP_LT, FDP_ST;

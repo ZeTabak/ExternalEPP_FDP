@@ -3,10 +3,8 @@ package main.java.org.seamcat.model.eventprocessing;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.Before;
-import java.io.BufferedReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
-import java.io.FileReader;
 import static main.java.org.seamcat.model.eventprocessing.DemoEPP_16_FDP.calculatePDF;
 import static main.java.org.seamcat.model.eventprocessing.DemoEPP_16_FDP.calculateBinValues;
 
@@ -35,13 +33,14 @@ public class Test_FDP_Annex1 {
         double [] iRSS_vect=null;
 
         try {
-            iRSS_vect = parseCSV("src/main/java/org/seamcat/model/eventprocessing/iRSS_S7.csv");
+            iRSS_vect = parseCSV("iRSS_S7.csv");
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        Map<String, Double> result = new HashMap<>();
-        Map<String, Double[]> expectedResult = new HashMap<String, Double[]>();
+        Map<String, Double> result;
+        // Expected results
+        Map<String, Double[]> expectedResult = new HashMap<>();
         expectedResult.put("FDP", new Double[] {3.156, 44.417});
         expectedResult.put("FDP_LT", new Double[] {3.156, 31.836});
         expectedResult.put("FDP_ST", new Double[] {0., 12.581});
@@ -53,35 +52,47 @@ public class Test_FDP_Annex1 {
         expectedResult.put("IN_ST dB", new Double[] {9.542, 9.542});
 
         // getting I/N (Z) of VSL in dB
+        assert iRSS_vect != null;
         double[] I_N = Arrays.stream(iRSS_vect).map(j -> j - VLRNoise[0]).toArray();
 
         for (int i = 0; i < lon.length; i++) {
             // pdf of I/N and bin values dB
             double[] pdf_I_N = calculatePDF(I_N, NoBins[i]);
             double[] I_N_bins = calculateBinValues(I_N, NoBins[i]);
-
+            // Execution
             P530v18MultipathFading p530v18MultipathFading = new P530v18MultipathFading(lon[i], lat[i]);
             result = eEPP_FDP.calculateFDP(he[i], hr[i], ht[i], f[i], d[i], FM[i], ATPC, 0, NoBins[i], p530v18MultipathFading, pdf_I_N, I_N_bins);
-            System.out.println(result);
+
+            System.out.println("Results iteration " + i + ":");
+            for (Map.Entry<String, Double> entry : result.entrySet()) {
+                System.out.println(entry.getKey() + ": " + entry.getValue());
+            }
+            System.out.println("________________________________");
 
             // assert
-            Assert.assertEquals(expectedResult.get("FDP")[i], result.get("FDP"), 1e-3);
-            Assert.assertEquals(expectedResult.get("FDP_LT")[i], result.get("FDP_LT"), 1e-3);
-            Assert.assertEquals(expectedResult.get("FDP_ST")[i], result.get("FDP_ST"), 1e-3);
-            Assert.assertEquals(expectedResult.get("P00x100")[i], result.get("P00")*100, 1e-3);
-            Assert.assertEquals(expectedResult.get("P0ix100")[i], result.get("P0I")*100, 1e-3);
-            Assert.assertEquals(expectedResult.get("P0i_LTx100")[i], result.get("P0I_LT")*100, 1e-3);
-            Assert.assertEquals(expectedResult.get("P0i_STx100")[i], result.get("P0I_ST")*100, 1e-3);
-            Assert.assertEquals(expectedResult.get("Gammax100")[i], result.get("Gamma")*100, 1e-3);
-            Assert.assertEquals(expectedResult.get("IN_ST dB")[i], result.get("IN_ST"), 1e-3);
+            doFDPAssert(i, expectedResult, result);
         }
 
     }
-    // Helper method to read iRSS File
+
+    protected static void doFDPAssert(int i, Map<String, Double[]> expectedResult, Map<String, Double> result) {
+        Assert.assertEquals(expectedResult.get("FDP")[i], result.get("FDP"), 1e-3);
+        Assert.assertEquals(expectedResult.get("FDP_LT")[i], result.get("FDP_LT"), 1e-3);
+        Assert.assertEquals(expectedResult.get("FDP_ST")[i], result.get("FDP_ST"), 1e-3);
+        Assert.assertEquals(expectedResult.get("P00x100")[i], result.get("P00")*100, 1e-3);
+        Assert.assertEquals(expectedResult.get("P0ix100")[i], result.get("P0I")*100, 1e-3);
+        Assert.assertEquals(expectedResult.get("P0i_LTx100")[i], result.get("P0I_LT")*100, 1e-3);
+        Assert.assertEquals(expectedResult.get("P0i_STx100")[i], result.get("P0I_ST")*100, 1e-3);
+        Assert.assertEquals(expectedResult.get("Gammax100")[i], result.get("Gamma")*100, 1e-3);
+        Assert.assertEquals(expectedResult.get("IN_ST dB")[i], result.get("IN_ST"), 1e-3);
+    }
+
+    // Helper method to read iRSS csv File
     public static double[] parseCSV(String filePath) throws IOException {
         List<Double> values = new ArrayList<>();
         int numerator=0;
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+        InputStream resourceStream = Test_FDP_Annex1.class.getResourceAsStream(filePath);
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(resourceStream))) {
             String line;
             while ((line = br.readLine()) != null) {
                 // Assuming each line contains a single double value separated by comma
