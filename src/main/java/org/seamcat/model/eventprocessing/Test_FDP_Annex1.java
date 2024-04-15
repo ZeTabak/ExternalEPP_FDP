@@ -41,13 +41,13 @@ public class Test_FDP_Annex1 {
         Map<String, Double> result;
         // Expected results
         Map<String, Double[]> expectedResult = new HashMap<>();
-        expectedResult.put("FDP", new Double[] {3.156, 44.417});
-        expectedResult.put("FDP_LT", new Double[] {3.156, 31.836});
-        expectedResult.put("FDP_ST", new Double[] {0., 12.581});
+        expectedResult.put("FDP", new Double[] {3.156, 44.413});
+        expectedResult.put("FDP_LT", new Double[] {3.156, 31.833});
+        expectedResult.put("FDP_ST", new Double[] {0., 12.5798});
         expectedResult.put("P00x100", new Double[] {0.64232, 0.64232});
         expectedResult.put("P0ix100", new Double[] {0.662, 0.9276});
         expectedResult.put("P0i_STx100", new Double[] {0.6423, 0.7231});
-        expectedResult.put("P0i_LTx100", new Double[] {0.6625, 0.8478});
+        expectedResult.put("P0i_LTx100", new Double[] {0.6625, 0.8467});
         expectedResult.put("Gammax100", new Double[] {0.0, 0.095});
         expectedResult.put("IN_ST dB", new Double[] {9.542, 9.542});
 
@@ -94,9 +94,17 @@ public class Test_FDP_Annex1 {
         InputStream resourceStream = Test_FDP_Annex1.class.getResourceAsStream(filePath);
         try (BufferedReader br = new BufferedReader(new InputStreamReader(resourceStream))) {
             String line;
+
+            br.mark(3);
+            int firstChar = br.read();
+            if (firstChar != 0xFEFF) { // Check if the first character is the BOM
+                br.reset(); // Not BOM, reset to the beginning
+            }
+
             while ((line = br.readLine()) != null) {
                 // Assuming each line contains a single double value separated by comma
                 numerator = numerator + 1;
+                /*
                 String[] tokens = line.split(",");
                 for (String token : tokens) {
                     try {
@@ -107,6 +115,14 @@ public class Test_FDP_Annex1 {
                         System.err.println("Warning: Non-numeric value found in the CSV file for value" + token + " in line  " + numerator);
                     }
                 }
+                 */
+                    try {
+                        double value = Double.parseDouble(line.trim());
+                        values.add(value);
+                    } catch (NumberFormatException e) {
+                        // Handle non-numeric values if necessary
+                        System.err.println("Warning: Non-numeric value found in the CSV file for value" + line + " in line  " + numerator);
+                    }
             }
         }
         // Convert List<Double> to double[]

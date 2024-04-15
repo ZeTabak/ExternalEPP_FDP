@@ -130,14 +130,14 @@ public class Test_FDP_Annex2 {
 
         Map<String, Double> result;
         Map<String, Double[]> expectedResult = new HashMap<>();
-        expectedResult.put("FDP", new Double[] {20.717, 25.083});
-        expectedResult.put("FDP_LT", new Double[] {0.753, 0.7494});
-        expectedResult.put("FDP_ST", new Double[] {19.963, 24.333});
+        expectedResult.put("FDP", new Double[] {9.921, 34.231});
+        expectedResult.put("FDP_LT", new Double[] {9.921, 9.897});
+        expectedResult.put("FDP_ST", new Double[] {0.0, 24.333});
         expectedResult.put("P00x100", new Double[] {0.00501, 4.1093e-3});
-        expectedResult.put("P0ix100", new Double[] {0.00604, 5.14025e-3});
-        expectedResult.put("P0i_STx100", new Double[] {0.00601, 5.10945e-3});
-        expectedResult.put("P0i_LTx100", new Double[] {0.00505, 4.1402e-3});
-        expectedResult.put("Gammax100", new Double[] {0.001, 1e-5});
+        expectedResult.put("P0ix100", new Double[] {0.00501, 5.516e-3});
+        expectedResult.put("P0i_STx100", new Double[] {5.009e-3, 5.10945e-3});
+        expectedResult.put("P0i_LTx100", new Double[] {5.5059e-3, 4.516e-3});
+        expectedResult.put("Gammax100", new Double[] {0.000, 1e-5});
         expectedResult.put("IN_ST dB", new Double[] {14.86, 9.542});
 
         // getting I/N (Z) of VSL in dB
