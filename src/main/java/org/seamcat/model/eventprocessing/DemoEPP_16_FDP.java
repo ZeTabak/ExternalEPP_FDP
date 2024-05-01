@@ -99,7 +99,7 @@ public class DemoEPP_16_FDP
                 + "of Tx and Rx antenna and terrain height are taken from terrain profile, otherwise <br>"
                 + "these values are taken from inputs<br>"
                 + "ver 1.0 (Dec 2023) - first implementation of FDP calculations <br>"
-                + "ver 2.0 (XX 2024) - added terrain feature in calculations and multipath occurrence factor to results, implementation Annex 2 for ATPC</html>");
+                + "ver 1.5 (Apr 2024) - added terrain feature in calculations and multipath occurrence factor to results, implementation Annex 2 for ATPC</html>");
     }
 
     @Override
