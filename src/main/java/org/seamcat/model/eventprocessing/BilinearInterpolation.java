@@ -1,5 +1,8 @@
 package main.java.org.seamcat.model.eventprocessing;
 
+//  @author: Zeljko TABAKOVIC
+//  All rights reserved.
+
 public class BilinearInterpolation {
 
         public static double[] interp2(double[] X, double[] Y, double[][] V, double[] Xq, double[] Yq) {

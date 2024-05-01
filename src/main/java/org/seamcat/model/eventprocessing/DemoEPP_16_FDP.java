@@ -26,6 +26,9 @@ import org.seamcat.model.types.Description;
 import org.seamcat.model.types.Unit;
 import org.seamcat.model.types.result.*;
 
+//  @author: Zeljko TABAKOVIC
+//  All rights reserved.
+
 public class DemoEPP_16_FDP
     implements EventProcessingPlugin<DemoEPP_16_FDP.Input>, EventProcessingPostProcessor<DemoEPP_16_FDP.Input> {
 

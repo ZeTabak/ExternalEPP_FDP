@@ -13,6 +13,9 @@ import java.io.FileReader;
 import static main.java.org.seamcat.model.eventprocessing.DemoEPP_16_FDP.*;
 import static main.java.org.seamcat.model.eventprocessing.Test_FDP_Annex1.parseCSV;
 
+//  @author: Zeljko TABAKOVIC
+//  All rights reserved.
+
 public class Test_FDP_Annex2 {
     DemoEPP_16_FDP eEPP_FDP;
 

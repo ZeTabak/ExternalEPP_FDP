@@ -4,6 +4,9 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
+//  @author: Zeljko TABAKOVIC
+//  All rights reserved.
+
 public class P530V18DigitalMaps {
     public static double getLogK(double lon, double lat) {
         double logK;

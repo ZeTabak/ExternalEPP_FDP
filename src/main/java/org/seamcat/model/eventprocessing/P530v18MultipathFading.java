@@ -2,6 +2,9 @@ package main.java.org.seamcat.model.eventprocessing;
 
 import org.seamcat.model.mathematics.Mathematics;
 
+//  @author: Zeljko TABAKOVIC
+//  All rights reserved.
+
 public class P530v18MultipathFading {
 
     double dN75;

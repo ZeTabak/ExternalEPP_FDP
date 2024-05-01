@@ -8,6 +8,9 @@ import java.util.*;
 import static main.java.org.seamcat.model.eventprocessing.DemoEPP_16_FDP.calculatePDF;
 import static main.java.org.seamcat.model.eventprocessing.DemoEPP_16_FDP.calculateBinValues;
 
+//  @author: Zeljko TABAKOVIC
+//  All rights reserved.
+
 public class Test_FDP_Annex1 {
 
     DemoEPP_16_FDP eEPP_FDP;
