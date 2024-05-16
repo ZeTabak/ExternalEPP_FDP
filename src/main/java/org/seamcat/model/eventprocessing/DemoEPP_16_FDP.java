@@ -98,11 +98,12 @@ public class DemoEPP_16_FDP
                 + "It uses definition of FDP in ITU-R Recommendations F.1108, ITU-R F.758, and <br>"
                 + "calculates the fade probability based on ITU-R P.530-18 method for all percentages <br>"
                 + "of time according to 2.3.2 and methodology derived by WGSE SE19 SE19(23)042A05 <br>"
-                + "if terrain data is available Longitude and latitude of the link mid point, heights <br>"
+                + "if terrain data is available longitude and latitude of the link mid point, heights <br>"
                 + "of Tx and Rx antenna and terrain height are taken from terrain profile, otherwise <br>"
                 + "these values are taken from inputs<br>"
                 + "ver 1.0 (Dec 2023) - first implementation of FDP calculations <br>"
-                + "ver 1.5 (Apr 2024) - added terrain feature in calculations and multipath occurrence factor to results, implementation Annex 2 for ATPC</html>");
+                + "ver 1.5 (Apr 2024) - added terrain feature in calculations and multipath occurrence factor to results, implementation Annex 2 for ATPC<br>"
+                + "ver 1.6_int1 (May 2024) - improvements</html>");
     }
 
     @Override
@@ -351,6 +352,10 @@ public class DemoEPP_16_FDP
         // Find the min and max values in the data
         double min = Arrays.stream(data).min().getAsDouble();
         double max = Arrays.stream(data).max().getAsDouble();
+        if (min == max){
+            min = min - 1./numBins;
+            max = max + 1./numBins;
+        }
 
         // Calculate bin width
         //double binWidth = (max - min) / (numBins);
@@ -377,6 +382,10 @@ public class DemoEPP_16_FDP
         // Find the min and max values in the data
         double min = Arrays.stream(data).min().getAsDouble();
         double max = Arrays.stream(data).max().getAsDouble();
+        if (min == max){
+            min = min - 1./numBins;
+            max = max + 1./numBins;
+        }
 
         // Calculate bin width
         // results in negative fdp and integrate(I_N_bins, pdf_I_N, I_N_bins[0], I_N_bins[input.binNo() - 1]) < 1
@@ -394,6 +403,7 @@ public class DemoEPP_16_FDP
     // Function to perform numerical integration using the trapezoidal rule
     public static double integrate(double[] x, double[] fx, double a, double b) {
         double integral = 0.0;
+        double deltaX=0;
 
         if (x.length != fx.length) {
             throw new IllegalArgumentException("Arrays x and fx must have the same length");
@@ -416,12 +426,47 @@ public class DemoEPP_16_FDP
         }
         // Trapezoidal rule
         for (int i = indexA; i < indexB; i++) {
-            double deltaX = x[i + 1] - x[i];
+            deltaX = x[i + 1] - x[i];
             double area = (fx[i] + fx[i + 1]) * deltaX / 2.0;
             integral += area;
         }
+        //integral += (fx[indexA] + fx[indexB]) * deltaX / 2.0;
         return integral;
     }
+
+    // Function to perform numerical integration using sum of pdfs
+    public static double integrate2(double[] x, double[] fx, double a, double b) {
+        double integral = 0.0;
+        double deltaX=0;
+
+        if (x.length != fx.length) {
+            throw new IllegalArgumentException("Arrays x and fx must have the same length");
+        }
+        if (x.length < 2) {
+            throw new IllegalArgumentException("Arrays x and fx must have at least two points for integration");
+        }
+
+        // Find the index corresponding to 'a' and 'b' in the x array
+        int indexA = 0;
+        int indexB = 0;
+
+        for (int i = 0; i < x.length; i++) {
+            if (x[i] <= a) {
+                indexA = i;
+            }
+            if (x[i] <= b) {
+                indexB = i;
+            }
+        }
+
+        for (int i = indexA; i <= indexB; i++) {
+            integral += fx[i];
+        }
+        integral = integral * (x[1] - x[0]);
+
+        return integral;
+    }
+
 
     public static double[] midPoint(double lat1, double lon1, double lat2, double lon2) {
         // convert to radians
