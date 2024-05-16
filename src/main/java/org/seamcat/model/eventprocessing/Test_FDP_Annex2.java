@@ -48,9 +48,9 @@ public class Test_FDP_Annex2 {
 
         Map<String, Double> result;
         Map<String, Double[]> expectedResult = new HashMap<>();
-        expectedResult.put("FDP", new Double[] {20.717, 25.083});
-        expectedResult.put("FDP_LT", new Double[] {0.753, 0.7494});
-        expectedResult.put("FDP_ST", new Double[] {19.963, 24.333});
+        expectedResult.put("FDP", new Double[] {20.687, 25.053});
+        expectedResult.put("FDP_LT", new Double[] {0.7245, 0.72030});
+        expectedResult.put("FDP_ST", new Double[] {19.9628, 24.333});
         expectedResult.put("P00x100", new Double[] {0.00501, 4.1093e-3});
         expectedResult.put("P0ix100", new Double[] {0.00604, 5.14025e-3});
         expectedResult.put("P0i_STx100", new Double[] {0.00601, 5.10945e-3});
@@ -110,16 +110,16 @@ public class Test_FDP_Annex2 {
     @Test
     public void test_FDP_AS6() {
         //Setup
-        double [] lon = new double[] {15.0, 15.5};
+        double [] lon = new double[] {15.0, 15.0};
         double [] lat = new double[] {45., 45.};
         double [] he = new double[] {40., 40.};
-        double [] hr = new double[] {20., 10.};
-        double [] ht = new double[] {0., 5.};
+        double [] hr = new double[] {10., 10.};
+        double [] ht = new double[] {0., 0.};
         double [] f = new double[] {6., 6.};
-        double [] d = new double[] {45., 30.};
-        double [] FM = new double[] {35., 30. };
+        double [] d = new double[] {30., 60.};
+        double [] FM = new double[] {25., 20. };
         boolean ATPC = true;
-        double atpcRange = 20;
+        double atpcRange = 14;
         double [] VLRNoise = new double[] {-94., -94.0};
         int [] NoBins = new int[] {1000, 1000};
 
@@ -133,15 +133,15 @@ public class Test_FDP_Annex2 {
 
         Map<String, Double> result;
         Map<String, Double[]> expectedResult = new HashMap<>();
-        expectedResult.put("FDP", new Double[] {9.921, 34.231});
-        expectedResult.put("FDP_LT", new Double[] {9.921, 9.897});
-        expectedResult.put("FDP_ST", new Double[] {0.0, 24.333});
-        expectedResult.put("P00x100", new Double[] {0.00501, 4.1093e-3});
-        expectedResult.put("P0ix100", new Double[] {0.00501, 5.516e-3});
-        expectedResult.put("P0i_STx100", new Double[] {5.009e-3, 5.10945e-3});
-        expectedResult.put("P0i_LTx100", new Double[] {5.5059e-3, 4.516e-3});
-        expectedResult.put("Gammax100", new Double[] {0.000, 1e-5});
-        expectedResult.put("IN_ST dB", new Double[] {14.86, 9.542});
+        expectedResult.put("FDP", new Double[] {19.396, 21.145});
+        expectedResult.put("FDP_LT", new Double[] {8.872, 7.653});
+        expectedResult.put("FDP_ST", new Double[] {10.524, 13.491});
+        expectedResult.put("P00x100", new Double[] {0.00950, 0.376});
+        expectedResult.put("P0ix100", new Double[] {0.0113, 0.456});
+        expectedResult.put("P0i_STx100", new Double[] {0.0105, 0.42739});
+        expectedResult.put("P0i_LTx100", new Double[] {0.01034, 0.4054});
+        expectedResult.put("Gammax100", new Double[] {0.001, 5.09999E-2});
+        expectedResult.put("IN_ST dB", new Double[] {10.64, 4.7437});
 
         // getting I/N (Z) of VSL in dB
         assert iRSS_vect != null;

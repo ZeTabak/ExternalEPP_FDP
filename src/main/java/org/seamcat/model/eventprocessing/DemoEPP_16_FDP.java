@@ -284,6 +284,7 @@ public class DemoEPP_16_FDP
         p00 = p530v18MultipathFading.multipathFading(he, hr, ht, frequency, d, fMargin) / 100;
         p0I = p00; // initialisation
 
+        // index for determining between LT and ST region
         index = binNo - 1; trigger = false;
         indexAtpc = binNo - 1; triggerAtpc = false;
 
@@ -308,17 +309,20 @@ public class DemoEPP_16_FDP
             }
         }
         // integration to determine probability of outage from fading and interference p0I, p0I_LT, p0I_ST and
-        p0I_LT = integrate(I_N_bins, weightedFading, I_N_bins[0], I_N_bins[index]);
+        // change in v1.6
+        //p0I_LT = integrate(I_N_bins, weightedFading, I_N_bins[0], I_N_bins[index]);
 
         // Annex 2 - ATPC
         if (ATPCisRelevant) {
             p0I_ST = integrate(I_N_bins, pdf_I_N, I_N_bins[indexAtpc], I_N_bins[binNo - 1]);
+            p0I_LT = integrate(I_N_bins, weightedFading, I_N_bins[0], I_N_bins[indexAtpc]);
             p0I = p0I_LT + p0I_ST;
             gamma = integrate(I_N_bins, pdf_I_N, I_N_bins[indexAtpc], I_N_bins[binNo - 1]);
             I_N_st_dB= Mathematics.linear2dB(Mathematics.dB2Linear(NFM) - 1);
         // Annex 1 - No ATPC
         } else {
             p0I = integrate(I_N_bins, weightedFading, I_N_bins[0], I_N_bins[binNo - 1]);
+            p0I_LT = integrate(I_N_bins, weightedFading, I_N_bins[0], I_N_bins[index]);
             p0I_ST = integrate(I_N_bins, weightedFading, I_N_bins[index], I_N_bins[binNo - 1]);
             gamma = integrate(I_N_bins, pdf_I_N, I_N_bins[index], I_N_bins[binNo - 1]);
             I_N_st_dB = Mathematics.linear2dB(Mathematics.dB2Linear(fMargin) - 1);
@@ -327,6 +331,8 @@ public class DemoEPP_16_FDP
         // applying correction factor
         p0I_LT = p0I_LT + gamma * p00;
         p0I_ST = p0I_ST + (1 - gamma) * p00;
+        // check equality
+        double pOI_ST_2=p00+gamma*(1-p00);
 
         // calculating FDP in percent
         FDP_LT = ((p0I_LT / p00 - 1)) * 100;
@@ -430,6 +436,7 @@ public class DemoEPP_16_FDP
             double area = (fx[i] + fx[i + 1]) * deltaX / 2.0;
             integral += area;
         }
+        // Todo ?? this change of integration method gives result like in integrate2 - see test_gamma_AS6()
         //integral += (fx[indexA] + fx[indexB]) * deltaX / 2.0;
         return integral;
     }
@@ -437,7 +444,6 @@ public class DemoEPP_16_FDP
     // Function to perform numerical integration using sum of pdfs
     public static double integrate2(double[] x, double[] fx, double a, double b) {
         double integral = 0.0;
-        double deltaX=0;
 
         if (x.length != fx.length) {
             throw new IllegalArgumentException("Arrays x and fx must have the same length");
