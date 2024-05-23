@@ -161,10 +161,11 @@ public class Test_Helpers {
         //Setup
         double VLRNoise = -94.0;
         int NoBins = 1000;
-        double NFM = 11.;
-        double exResult;
+        double FM = 11.;
+        double gammaExpected_count;
         double z, desensitisation;
-        int counter = 0, index=1000;
+        long counter = 0;
+        int index=1000;
         double [] iRSS_vect=null;
 
         try {
@@ -177,15 +178,17 @@ public class Test_Helpers {
         double[] I_N = Arrays.stream(iRSS_vect).map(j -> j - VLRNoise).toArray();
 
         //Expected
+        /*
         for (int i = 0; i < I_N.length; i++) {
             z = Mathematics.dB2Linear(I_N[i]);
             desensitisation = Mathematics.linear2dB(1 + z);
-            if (desensitisation >= NFM) {
+            if (desensitisation >= FM) {
                 counter +=1;
             }
         }
-        exResult= 1.* counter/ I_N.length;
-
+        */
+        counter = Arrays.stream(I_N).filter(i2n -> Mathematics.linear2dB(Mathematics.dB2Linear(i2n) + 1) >= FM).count();
+        gammaExpected_count= 1.* counter/ I_N.length;
 
         // pdf of I/N and bin values dB
         double[] pdf_I_N = calculatePDF(I_N, NoBins);
@@ -196,27 +199,95 @@ public class Test_Helpers {
             z = Mathematics.dB2Linear(I_N_bins[j]);
             desensitisation = Mathematics.linear2dB(1 + z);
             // determine index for ST with ATPC
-            if (!trigger  && desensitisation >= NFM) {
+            if (!trigger  && desensitisation >= FM) {
                     index = j;
                     trigger = true;
             }
         }
 
-        double integral = integrate(I_N_bins, pdf_I_N, I_N_bins[index], I_N_bins[NoBins - 1]);
-        double integral2 = integrate2(I_N_bins, pdf_I_N, I_N_bins[index], I_N_bins[NoBins - 1]);
+        double gammaIntegral = integrate(I_N_bins, pdf_I_N, I_N_bins[index], I_N_bins[NoBins - 1]);
+        double gammaIntegral2 = integrate2(I_N_bins, pdf_I_N, I_N_bins[index], I_N_bins[NoBins - 1]);
 
         System.out.println("Results:");
         //System.out.println("pdf : " + Arrays.toString(pdf_I_N));
         //System.out.println("bins: " + Arrays.toString((I_N_bins)));
-        System.out.println("index  : " + index);
-        System.out.println("integral Sum  : " + integral2);
-        System.out.println("integral Trapezoid : " + integral);
-        System.out.println("expected  : " + exResult);
+        System.out.println("FM  : " + FM);
+        System.out.println("Counter  : " + counter);
+        System.out.println("Index  : " + index);
+        System.out.println();
+        System.out.println("Expected Gamma: " + gammaExpected_count);
+        System.out.println("Gamma integral Trapezoid : " + gammaIntegral);
+        System.out.println("Gamma integral Sum  : " + gammaIntegral2);
         System.out.println("________________________________");
 
         // Here is seen issue with trapezoid integration
         //Assert.assertEquals(exResult[i], integral, 1e-5);
+    }
 
+    @Test
+    public void test_gamma_Var() {
+        //Setup
+        double VLRNoise = -120.0;
+        int NoBins = 1000;
+        //double FM = 19.84; // Triangle
+        //double FM = 71.; // Gauss
+        double FM = 29.9; // uniform
+        double gammaExpected_count;
+        double z, desensitisation;
+        long counter = 0;
+        int index=1000;
+        double [] iRSS_vect=null;
+
+        try {
+            //iRSS_vect = parseCSV("I_Triangular.csv");
+            //iRSS_vect = parseCSV("I_Gaussian.csv");
+            iRSS_vect = parseCSV("I_Uniform.csv");
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        // getting I/N (Z) of VSL in dB
+        assert iRSS_vect != null;
+        double[] I_N = Arrays.stream(iRSS_vect).map(j -> j - VLRNoise).toArray();
+
+        //ToDo Expected - Most precise calculation of Gamma
+        counter = Arrays.stream(I_N).filter(i2n -> Mathematics.linear2dB(Mathematics.dB2Linear(i2n) + 1) >= FM).count();
+        gammaExpected_count= 1.* counter/ I_N.length;
+
+        // pdf of I/N and bin values dB
+        double[] pdf_I_N = calculatePDF(I_N, NoBins);
+        double[] I_N_bins = calculateBinValues(I_N, NoBins);
+        boolean trigger = false;
+
+        for (int j = 0; j < NoBins; j++) {
+            z = Mathematics.dB2Linear(I_N_bins[j]);
+            desensitisation = Mathematics.linear2dB(1 + z);
+            // determine index for ST without ATPC
+            if (!trigger  && desensitisation >= FM) {
+                index = j;
+                trigger = true;
+            }
+        }
+
+        double gammaIntegral = integrate(I_N_bins, pdf_I_N, I_N_bins[index], I_N_bins[NoBins - 1]);
+        double gammaIntegral2 = integrate2(I_N_bins, pdf_I_N, I_N_bins[index], I_N_bins[NoBins - 1]);
+
+        System.out.println("Results:");
+        //System.out.println("pdf : " + Arrays.toString(pdf_I_N));
+        //System.out.println("bins: " + Arrays.toString((I_N_bins)));
+        System.out.println("FM  : " + FM);
+        System.out.println("Min : " + Arrays.stream(I_N).min());
+        System.out.println("Max : " + Arrays.stream(I_N).max());
+        System.out.println("Counter  : " + counter + " of : " + I_N.length);
+        System.out.println("Index  : " + index + " of : " + NoBins);
+        System.out.println();
+        System.out.println("Expected Gamma: " + gammaExpected_count);
+        System.out.println("Gamma integral Trapezoid : " + gammaIntegral);
+        System.out.println("Gamma integral Sum  : " + gammaIntegral2);
+        System.out.println("________________________________");
+
+        // Here is seen issue with trapezoid integration
+        //Assert.assertEquals(exResult[i], integral, 1e-5);
     }
 
 }

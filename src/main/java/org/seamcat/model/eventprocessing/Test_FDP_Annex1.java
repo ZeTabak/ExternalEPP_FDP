@@ -96,7 +96,6 @@ public class Test_FDP_Annex1 {
 
         try {
             iRSS_vect = parseCSV("I_Constant.csv");
-            // iRSS_vect = parseCSV("I_Triangular.csv");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -136,6 +135,7 @@ public class Test_FDP_Annex1 {
             //doFDPAssert(i, expectedResult, result);
         }
     }
+
     @Test
     public void test_FDP_Triangular() {
         //Setup
@@ -148,13 +148,135 @@ public class Test_FDP_Annex1 {
         double [] d = new double[] {100.};
         double [] FM = new double[] {25.};
         double [] VLRNoise = new double[] {-80.9897};
-        int [] NoBins = new int[] {100};
+        int [] NoBins = new int[] {1000};
         boolean ATPC = false;
 
         double [] iRSS_vect=null;
 
         try {
             iRSS_vect = parseCSV("I_Triangular.csv");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Map<String, Double> result;
+        // Expected results
+        Map<String, Double[]> expectedResult = new HashMap<>();
+        expectedResult.put("FDP", new Double[] {3.156, 44.413});
+        expectedResult.put("FDP_LT", new Double[] {3.156, 31.833});
+        expectedResult.put("FDP_ST", new Double[] {0., 12.5798});
+        expectedResult.put("P00x100", new Double[] {100.0, 0.64232});
+        expectedResult.put("P0ix100", new Double[] {99.999, 0.9276});
+        expectedResult.put("P0i_STx100", new Double[] {100., 0.7231});
+        expectedResult.put("P0i_LTx100", new Double[] {99.999, 0.8467});
+        expectedResult.put("Gammax100", new Double[] {0.0, 0.095});
+        expectedResult.put("IN_ST dB", new Double[] {24.986, 9.542});
+
+        // getting I/N (Z) of VSL in dB
+        assert iRSS_vect != null;
+        double[] I_N = Arrays.stream(iRSS_vect).map(j -> j - VLRNoise[0]).toArray();
+
+        for (int i = 0; i < lon.length; i++) {
+            // pdf of I/N and bin values dB
+            double[] pdf_I_N = calculatePDF(I_N, NoBins[i]);
+            double[] I_N_bins = calculateBinValues(I_N, NoBins[i]);
+            // Execution
+            P530v18MultipathFading p530v18MultipathFading = new P530v18MultipathFading(lon[i], lat[i]);
+            //
+            double p0 = p530v18MultipathFading.multipathFadingSingleFreq(he[i], hr[i], ht[i], f[i], d[i], 0.0);
+            double p00 = p530v18MultipathFading.multipathFading(he[i], hr[i], ht[i], f[i], d[i], FM[i]) / 100;
+
+            result = eEPP_FDP.calculateFDP(he[i], hr[i], ht[i], f[i], d[i], FM[i], ATPC, 0, NoBins[i], p530v18MultipathFading, pdf_I_N, I_N_bins);
+
+            System.out.println("Results iteration " + i + ":");
+            for (Map.Entry<String, Double> entry : result.entrySet()) {
+                System.out.println(entry.getKey() + ": " + entry.getValue());
+            }
+            System.out.println("________________________________");
+
+            // assert
+            //doFDPAssert(i, expectedResult, result);
+        }
+    }
+
+    @Test
+    public void test_FDP_Uniform() {
+        //Setup
+        double [] lon = new double[] {-0.08588};
+        double [] lat = new double[] {51.50916};
+        double [] he = new double[] {20.};
+        double [] hr = new double[] {20.};
+        double [] ht = new double[] {0.};
+        double [] f = new double[] {6.};
+        double [] d = new double[] {100.};
+        double [] FM = new double[] {25.};
+        double [] VLRNoise = new double[] {-80.9897};
+        int [] NoBins = new int[] {1000};
+        boolean ATPC = false;
+
+        double [] iRSS_vect=null;
+
+        try {
+            iRSS_vect = parseCSV("I_Uniform.csv");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Map<String, Double> result;
+        // Expected results
+        Map<String, Double[]> expectedResult = new HashMap<>();
+        expectedResult.put("FDP", new Double[] {3.156, 44.413});
+        expectedResult.put("FDP_LT", new Double[] {3.156, 31.833});
+        expectedResult.put("FDP_ST", new Double[] {0., 12.5798});
+        expectedResult.put("P00x100", new Double[] {100.0, 0.64232});
+        expectedResult.put("P0ix100", new Double[] {99.999, 0.9276});
+        expectedResult.put("P0i_STx100", new Double[] {100., 0.7231});
+        expectedResult.put("P0i_LTx100", new Double[] {99.999, 0.8467});
+        expectedResult.put("Gammax100", new Double[] {0.0, 0.095});
+        expectedResult.put("IN_ST dB", new Double[] {24.986, 9.542});
+
+        // getting I/N (Z) of VSL in dB
+        assert iRSS_vect != null;
+        double[] I_N = Arrays.stream(iRSS_vect).map(j -> j - VLRNoise[0]).toArray();
+
+        for (int i = 0; i < lon.length; i++) {
+            // pdf of I/N and bin values dB
+            double[] pdf_I_N = calculatePDF(I_N, NoBins[i]);
+            double[] I_N_bins = calculateBinValues(I_N, NoBins[i]);
+            // Execution
+            P530v18MultipathFading p530v18MultipathFading = new P530v18MultipathFading(lon[i], lat[i]);
+            result = eEPP_FDP.calculateFDP(he[i], hr[i], ht[i], f[i], d[i], FM[i], ATPC, 0, NoBins[i], p530v18MultipathFading, pdf_I_N, I_N_bins);
+
+            System.out.println("Results iteration " + i + ":");
+            for (Map.Entry<String, Double> entry : result.entrySet()) {
+                System.out.println(entry.getKey() + ": " + entry.getValue());
+            }
+            System.out.println("________________________________");
+
+            // assert
+            //doFDPAssert(i, expectedResult, result);
+        }
+    }
+
+    @Test
+    public void test_FDP_Gaussian() {
+        //Setup
+        double [] lon = new double[] {-0.08588};
+        double [] lat = new double[] {51.50916};
+        double [] he = new double[] {20.};
+        double [] hr = new double[] {20.};
+        double [] ht = new double[] {0.};
+        double [] f = new double[] {6.};
+        double [] d = new double[] {100.};
+        double [] FM = new double[] {25.};
+        double [] VLRNoise = new double[] {-80.9897};
+        int [] NoBins = new int[] {1000};
+        boolean ATPC = false;
+
+        double [] iRSS_vect=null;
+
+        try {
+            iRSS_vect = parseCSV("I_Gaussian.csv");
         } catch (IOException e) {
             e.printStackTrace();
         }
