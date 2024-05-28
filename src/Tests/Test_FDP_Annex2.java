@@ -1,17 +1,16 @@
-package main.java.org.seamcat.model.eventprocessing;
+package Tests;
 
-import org.junit.Assert;
+import Tests.Test_FDP_Annex1;
+import main.java.org.seamcat.model.eventprocessing.DemoEPP_16_FDP;
+import main.java.org.seamcat.model.eventprocessing.P530v18MultipathFading;
 import org.junit.Test;
 import org.junit.Before;
-import org.seamcat.model.mathematics.Mathematics;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.*;
-import java.io.FileReader;
 
 import static main.java.org.seamcat.model.eventprocessing.DemoEPP_16_FDP.*;
-import static main.java.org.seamcat.model.eventprocessing.Test_FDP_Annex1.parseCSV;
+import static Tests.Test_FDP_Annex1.parseCSV;
 
 //  @author: Zeljko TABAKOVIC
 //  All rights reserved.

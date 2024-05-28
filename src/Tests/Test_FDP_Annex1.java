@@ -1,5 +1,7 @@
-package main.java.org.seamcat.model.eventprocessing;
+package Tests;
 
+import main.java.org.seamcat.model.eventprocessing.DemoEPP_16_FDP;
+import main.java.org.seamcat.model.eventprocessing.P530v18MultipathFading;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.Before;

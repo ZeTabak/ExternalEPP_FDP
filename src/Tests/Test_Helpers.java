@@ -1,17 +1,18 @@
-package main.java.org.seamcat.model.eventprocessing;
+package Tests;
 
 
+import main.java.org.seamcat.model.eventprocessing.DemoEPP_16_FDP;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.Before;
 import org.seamcat.model.mathematics.Mathematics;
 import java.io.*;
 import java.util.*;
-import java.io.FileWriter;
+
 import static main.java.org.seamcat.model.eventprocessing.DemoEPP_16_FDP.calculatePDF;
 import static main.java.org.seamcat.model.eventprocessing.DemoEPP_16_FDP.calculateBinValues;
 import static main.java.org.seamcat.model.eventprocessing.DemoEPP_16_FDP.integrate;
-import static main.java.org.seamcat.model.eventprocessing.Test_FDP_Annex1.parseCSV;
+import static Tests.Test_FDP_Annex1.parseCSV;
 import static main.java.org.seamcat.model.eventprocessing.DemoEPP_16_FDP.integrate2;
 
 //  @author: Zeljko TABAKOVIC
