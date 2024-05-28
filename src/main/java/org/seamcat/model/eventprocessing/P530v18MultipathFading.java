@@ -10,6 +10,14 @@ public class P530v18MultipathFading {
     double dN75;
     double logK;
 
+    public double getdN75() {
+        return dN75;
+    }
+
+    public double getLogK() {
+        return logK;
+    }
+
     public P530v18MultipathFading(double lon, double lat) {
         logK = P530V18DigitalMaps.getLogK(lon, lat);
         dN75 = P530V18DigitalMaps.getdN75(lon, lat);

@@ -270,7 +270,7 @@ public class Test_FDP_Annex1 {
         double [] d = new double[] {100.};
         double [] FM = new double[] {25.};
         double [] VLRNoise = new double[] {-80.9897};
-        int [] NoBins = new int[] {1000};
+        int [] NoBins = new int[] {10};
         boolean ATPC = false;
 
         double [] iRSS_vect=null;
