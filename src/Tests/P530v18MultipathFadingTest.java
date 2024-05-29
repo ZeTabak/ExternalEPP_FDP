@@ -88,4 +88,79 @@ public class P530v18MultipathFadingTest {
         System.out.println("FM : " + Arrays.toString(FM));
         System.out.println("pw: " + Arrays.toString((p_w)));
     }
+
+    @Test
+    public void multipathFading_100() {
+        //Setup
+        double lon = 15.67;
+        double lat = 45.31;
+        double he = 20.;
+        double hr = 20.;
+        double ht = 0.;
+        double f = 9.0;
+        double d =50.;
+
+        double [] FM = new double[] {-15., -10., -5., 0.0, 5., 10., 15., 20., 25., 30.,35., 40., 45., 50. };
+        double []  p_w = new double[14];
+        double p0 = 0.0;
+        double [] expectedResult = new double[] {100.0, 100.0, 100.0, 63.212055882855765, 9.233327489547637, 3.815279047373654, 1.8286207648486763, 0.7877637836999241, 0.2995006446033788, 0.09992254271880467, 0.031598282458689654, 0.009992254271880467, 0.0031598282458689658, 9.992254271880467E-4};
+
+        // Initialise PMP P.530v18 and get geo-climatic factor per link
+        P530v18MultipathFading p530v18MultipathFading = new P530v18MultipathFading(lon, lat);
+        // Multipath occurrence factor
+        p0 = p530v18MultipathFading.multipathFadingSingleFreq(he, hr, ht, f, d, 0.0);
+
+        // Execution
+        for (int i = 0; i < FM.length; i++) {
+            // Percentage of time that FM is exceeded in average worst month y; p530v18MultipathFading calculates in percent
+            p_w[i]= p530v18MultipathFading.multipathFading(he, hr, ht, f, d, FM[i]);
+
+            // Assert
+            Assert.assertEquals(expectedResult[i], p_w[i], 1e-5);
+        }
+        System.out.println("Geo-climatic Factor dN75 : " + p530v18MultipathFading.getdN75());
+        System.out.println("Geo-climatic Factor  logK: " + p530v18MultipathFading.getLogK());
+        System.out.println("p0  : " + p0);
+
+        System.out.println("FM : " + Arrays.toString(FM));
+        System.out.println("pw: " + Arrays.toString((p_w)));
+    }
+
+    // when p0 is high pw calculation is not stabile
+    @Test
+    public void multipathFading_high() {
+        //Setup
+        double lon = -0.08588;
+        double lat = 51.50916;
+        double he = 20.;
+        double hr = 20.;
+        double ht = 0.;
+        double f = 6.;
+        double d = 100.;
+
+        double [] FM = new double[] {-45., -15., -10., -5., 0.0, 5., 10., 15., 20., 25., 30.,35., 40., 45., 50. };
+        double []  p_w = new double[15];
+        double p0 = 0.0;
+        double [] expectedResult = new double[] {100.0, 100.0, 100.0, 1.0804789076264587, 63.212055882855765, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 4.719217550103676E11, 1.4923476232167404E11};
+
+        // Initialise PMP P.530v18 and get geo-climatic factor per link
+        P530v18MultipathFading p530v18MultipathFading = new P530v18MultipathFading(lon, lat);
+        // Multipath occurrence factor
+        p0 = p530v18MultipathFading.multipathFadingSingleFreq(he, hr, ht, f, d, 0.0);
+
+        // Execution
+        for (int i = 0; i < FM.length; i++) {
+            // Percentage of time that FM is exceeded in average worst month y; p530v18MultipathFading calculates in percent
+            p_w[i]= p530v18MultipathFading.multipathFading(he, hr, ht, f, d, FM[i]);
+
+            // Assert
+            Assert.assertEquals(expectedResult[i], p_w[i], 1e-5);
+        }
+        System.out.println("Geo-climatic Factor dN75 : " + p530v18MultipathFading.getdN75());
+        System.out.println("Geo-climatic Factor  logK: " + p530v18MultipathFading.getLogK());
+        System.out.println("p0  : " + p0);
+
+        System.out.println("FM : " + Arrays.toString(FM));
+        System.out.println("pw: " + Arrays.toString((p_w)));
+    }
 }
