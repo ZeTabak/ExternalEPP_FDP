@@ -2,6 +2,7 @@ package main.java.org.seamcat.model.eventprocessing;
 
 //  @author: Zeljko TABAKOVIC
 //  All rights reserved.
+// https://en.wikipedia.org/wiki/Bilinear_interpolation
 
 public class BilinearInterpolation {
 
@@ -12,16 +13,18 @@ public class BilinearInterpolation {
                 int xIdx = findIndex(X, Xq[i],true);
                 int yIdx = findIndex(Y, Yq[i], false);
 
+                // bilinear interpolation assumes x1 < x2 and y1 < y2
                 if (xIdx != -1 && yIdx != -1) {
+                    // when X is sorted in increasing order and Y is sorted in decreasing order
                     double x1 = X[xIdx];
                     double x2 = X[xIdx + 1];
-                    double y1 = Y[yIdx];
-                    double y2 = Y[yIdx + 1];
+                    double y2 = Y[yIdx];
+                    double y1 = Y[yIdx + 1];
 
-                    double v11 = V[yIdx][xIdx];
-                    double v12 = V[yIdx][xIdx + 1];
-                    double v21 = V[yIdx + 1][xIdx];
-                    double v22 = V[yIdx + 1][xIdx + 1];
+                    double v12 = V[yIdx][xIdx];
+                    double v22 = V[yIdx][xIdx + 1];
+                    double v11 = V[yIdx + 1][xIdx];
+                    double v21 = V[yIdx + 1][xIdx + 1];
 
                     double x = (Xq[i] - x1) / (x2 - x1);
                     double y = (Yq[i] - y1) / (y2 - y1);
