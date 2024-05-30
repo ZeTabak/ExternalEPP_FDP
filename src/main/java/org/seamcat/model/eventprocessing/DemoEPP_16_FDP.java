@@ -93,7 +93,7 @@ public class DemoEPP_16_FDP
 
     @Override
     public Description description() {
-        return new DescriptionImpl("eEPP 16: FDP - Fractional Degradation of Performance_v1.5",
+        return new DescriptionImpl("eEPP 16: FDP - Fractional Degradation of Performance_v1.6_4",
             "<html>This Event Processing Plugin calculates FDP for FS link with and without ATPC <br>"
                 + "It uses definition of FDP in ITU-R Recommendations F.1108, ITU-R F.758, and <br>"
                 + "calculates the fade probability based on ITU-R P.530-18 method for all percentages <br>"
@@ -103,7 +103,7 @@ public class DemoEPP_16_FDP
                 + "these values are taken from inputs<br>"
                 + "ver 1.0 (Dec 2023) - first implementation of FDP calculations <br>"
                 + "ver 1.5 (Apr 2024) - added terrain feature in calculations and multipath occurrence factor to results, implementation Annex 2 for ATPC<br>"
-                + "ver 1.6_int1 (May 2024) - improvements</html>");
+                + "ver 1.6_int4 (May 2024) - improvements</html>");
     }
 
     @Override
@@ -221,7 +221,7 @@ public class DemoEPP_16_FDP
         results.addSingleValueType(new DoubleResultType(FRACTIONAL_DEGRADATION_PERFORMANCE_ST, resultsFDP.getOrDefault("FDP_ST", 0.0)));
 
         // Collecting Intermediate values for testing
-        results.addSingleValueType(new DoubleResultType(PO, p0));
+        results.addSingleValueType(new DoubleResultType(PO, resultsFDP.getOrDefault("p0", 0.0)));
         results.addSingleValueType(new DoubleResultType(POO, resultsFDP.getOrDefault("P00", 0.0) * 100));
         results.addSingleValueType(new DoubleResultType(P0I, resultsFDP.getOrDefault("P0I", 0.0)  * 100));
         results.addSingleValueType(new DoubleResultType(POI_LT, resultsFDP.getOrDefault("P0I_LT", 0.0)  * 100));
@@ -245,7 +245,7 @@ public class DemoEPP_16_FDP
     }
 
     // Method for calculating FDP
-    protected Map<String, Double> calculateFDP (double he, double hr, double ht, double frequency, double d, double fMargin, boolean ATPCisRelevant, double atpcRange, int binNo, P530v18MultipathFading p530v18MultipathFading, double[] pdf_I_N, double[] I_N_bins ){
+    public Map<String, Double> calculateFDP (double he, double hr, double ht, double frequency, double d, double fMargin, boolean ATPCisRelevant, double atpcRange, int binNo, P530v18MultipathFading p530v18MultipathFading, double[] pdf_I_N, double[] I_N_bins ){
 
         double FDP, FDP_LT, FDP_ST;
         double p00, p0I, p0I_LT, p0I_ST;
@@ -279,6 +279,7 @@ public class DemoEPP_16_FDP
             NFM = fMargin - atpcRange;
         }
 
+        // Multipath occurrence factor ITU-R P.530 Ch 2.3.2 (11)
         double p0 = p530v18MultipathFading.multipathFadingSingleFreq(he, hr, ht, frequency, d, 0.0);
         // p00 probability of outage due to fading only; p530v18MultipathFading calculates in percent
         p00 = p530v18MultipathFading.multipathFading(he, hr, ht, frequency, d, fMargin) / 100;
@@ -343,6 +344,7 @@ public class DemoEPP_16_FDP
         results.put("FDP", FDP);
         results.put("FDP_LT", FDP_LT);
         results.put("FDP_ST", FDP_ST);
+        results.put("p0", p0);
         results.put("P00", p00);
         results.put("P0I", p0I);
         results.put("P0I_LT", p0I_LT);
@@ -354,6 +356,9 @@ public class DemoEPP_16_FDP
 
     public static double[] calculatePDF(double[] data, int numBins) {
         double[] pdf = new double[numBins];
+        for (int i = 0; i < numBins; i++) {
+            pdf[i] = 0.;
+        }
 
         // Find the min and max values in the data
         double min = Arrays.stream(data).min().getAsDouble();
@@ -370,7 +375,8 @@ public class DemoEPP_16_FDP
         // Count data points in each bin
         for (Double value : data) {
             int binIndex = (int) Math.floor((value - min) / binWidth);
-            binIndex = (binIndex == numBins) ? binIndex - 1 : binIndex;
+            binIndex = (binIndex >= numBins) ? numBins - 1 : binIndex;
+            binIndex = (binIndex < 0) ? 0 : binIndex;
             pdf[binIndex]++;
         }
 
@@ -436,7 +442,7 @@ public class DemoEPP_16_FDP
             double area = (fx[i] + fx[i + 1]) * deltaX / 2.0;
             integral += area;
         }
-        // Todo ?? this change of integration method gives result like in integrate2 - see test_gamma_AS6()
+        // This change of integration method gives result like in integrate2 - see test_gamma_AS6()
         //integral += (fx[indexA] + fx[indexB]) * deltaX / 2.0;
         return integral;
     }
