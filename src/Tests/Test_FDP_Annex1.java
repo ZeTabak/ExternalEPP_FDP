@@ -46,14 +46,14 @@ public class Test_FDP_Annex1 {
         Map<String, Double> result;
         // Expected results
         Map<String, Double[]> expectedResult = new HashMap<>();
-        expectedResult.put("FDP", new Double[] {3.156, 44.413});
-        expectedResult.put("FDP_LT", new Double[] {3.156, 31.833});
-        expectedResult.put("FDP_ST", new Double[] {0., 12.5798});
+        expectedResult.put("FDP", new Double[] {9.769, 45.246});
+        expectedResult.put("FDP_LT", new Double[] {9.769, 31.893});
+        expectedResult.put("FDP_ST", new Double[] {0., 13.3528});
         expectedResult.put("P00x100", new Double[] {0.64232, 0.64232});
-        expectedResult.put("P0ix100", new Double[] {0.662, 0.9276});
-        expectedResult.put("P0i_STx100", new Double[] {0.6423, 0.7231});
-        expectedResult.put("P0i_LTx100", new Double[] {0.6625, 0.8467});
-        expectedResult.put("Gammax100", new Double[] {0.0, 0.095});
+        expectedResult.put("P0ix100", new Double[] {0.70507, 0.93295});
+        expectedResult.put("P0i_STx100", new Double[] {0.6423, 0.72809});
+        expectedResult.put("P0i_LTx100", new Double[] {0.70507, 0.84718});
+        expectedResult.put("Gammax100", new Double[] {0.0, 0.0999});
         expectedResult.put("IN_ST dB", new Double[] {9.542, 9.542});
 
         // getting I/N (Z) of VSL in dB
@@ -75,7 +75,66 @@ public class Test_FDP_Annex1 {
             System.out.println("________________________________");
 
             // assert
-            //doFDPAssert(i, expectedResult, result);
+            doFDPAssert(i, expectedResult, result);
+        }
+    }
+
+    @Test
+    public void test_FDP_S1() {
+        //Setup
+        double [] lon = new double[] {15.0, 15.7};
+        double [] lat = new double[] {45., 45.33};
+        double [] he = new double[] {30., 20.};
+        double [] hr = new double[] {1.5, 20.};
+        double [] ht = new double[] {0., 5.};
+        double [] f = new double[] {0.9, 12.};
+        double [] d = new double[] {40., 15.};
+        double [] FM = new double[] {15., 10. };
+        double [] VLRNoise = new double[] {-94., -94.0};
+        int [] NoBins = new int[] {1000, 1000};
+        boolean ATPC = false;
+
+        double [] iRSS_vect=null;
+
+        try {
+            iRSS_vect = parseCSV("iRSS_S1.csv");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Map<String, Double> result;
+        // Expected results
+        Map<String, Double[]> expectedResult = new HashMap<>();
+        expectedResult.put("FDP", new Double[] {12.496, 37.6495});
+        expectedResult.put("FDP_LT", new Double[] {4.6318, 10.7958});
+        expectedResult.put("FDP_ST", new Double[] {7.8644, 26.853});
+        expectedResult.put("P00x100", new Double[] {0.14227, 0.14438});
+        expectedResult.put("P0ix100", new Double[] {0.16005, 0.198739});
+        expectedResult.put("P0i_STx100", new Double[] {0.15346, 0.18315});
+        expectedResult.put("P0i_LTx100", new Double[] {0.14886, 0.159967});
+        expectedResult.put("Gammax100", new Double[] {1.15E-2, 3.95E-2});
+        expectedResult.put("IN_ST dB", new Double[] {14.86, 9.542});
+
+        // getting I/N (Z) of VSL in dB
+        assert iRSS_vect != null;
+        double[] I_N = Arrays.stream(iRSS_vect).map(j -> j - VLRNoise[0]).toArray();
+
+        for (int i = 0; i < lon.length; i++) {
+            // pdf of I/N and bin values dB
+            double[] pdf_I_N = calculatePDF(I_N, NoBins[i]);
+            double[] I_N_bins = calculateBinValues(I_N, NoBins[i]);
+            // Execution
+            P530v18MultipathFading p530v18MultipathFading = new P530v18MultipathFading(lon[i], lat[i]);
+            result = eEPP_FDP.calculateFDP(he[i], hr[i], ht[i], f[i], d[i], FM[i], ATPC, 0, NoBins[i], p530v18MultipathFading, pdf_I_N, I_N_bins);
+
+            System.out.println("Results iteration " + i + ":");
+            for (Map.Entry<String, Double> entry : result.entrySet()) {
+                System.out.println(entry.getKey() + ": " + entry.getValue());
+            }
+            System.out.println("________________________________");
+
+            // assert
+            doFDPAssert(i, expectedResult, result);
         }
     }
 

@@ -376,7 +376,7 @@ public class DemoEPP_16_FDP
         for (Double value : data) {
             int binIndex = (int) Math.floor((value - min) / binWidth);
             binIndex = (binIndex >= numBins) ? numBins - 1 : binIndex;
-            binIndex = (binIndex < 0) ? 0 : binIndex;
+            binIndex = Math.max(binIndex, 0);
             pdf[binIndex]++;
         }
 
@@ -442,8 +442,21 @@ public class DemoEPP_16_FDP
             double area = (fx[i] + fx[i + 1]) * deltaX / 2.0;
             integral += area;
         }
+        // Option 1 - Integrate correction
+        // Extremities need to be considered when using Trapezoidal rule, otherwise integrating does not lead to 1
+        ///*
+        if (indexA == 0) {
+            integral += (fx[indexA]) * (x[indexA + 1] - x[indexA]) / 2.0;
+        }
+        if (indexA != indexB && indexB == x.length - 1) {
+            integral += (fx[indexB]) * (x[indexB] - x[indexB - 1]) / 2.0;
+        }
+        //*/
+        // Option 2 - integrate correction
         // This change of integration method gives result like in integrate2 - see test_gamma_AS6()
+        // issue is that FDP <> FDP_LT + FDP_ST
         //integral += (fx[indexA] + fx[indexB]) * deltaX / 2.0;
+
         return integral;
     }
 

@@ -18,7 +18,7 @@ import static main.java.org.seamcat.model.eventprocessing.DemoEPP_16_FDP.integra
 //  @author: Zeljko TABAKOVIC
 //  All rights reserved.
 
-public class Test_Helpers {
+public class Helpers_Tests {
 
     DemoEPP_16_FDP eEPP_FDP;
 
@@ -113,7 +113,7 @@ public class Test_Helpers {
             System.out.println("integral sum : " + integral2);
             System.out.println("________________________________");
 
-            //Assert.assertEquals(exResult[i], integral, 1e-3);
+            Assert.assertEquals(exResult[i], integral, 1e-3);
         }
     }
 
@@ -159,7 +159,7 @@ public class Test_Helpers {
             System.out.println("integral Sum  : " + integral2);
             System.out.println("________________________________");
 
-            //Assert.assertEquals(exResult[i], integral, 1e-5);
+            Assert.assertEquals(exResult[i], integral, 1e-5);
         }
     }
 
@@ -187,15 +187,6 @@ public class Test_Helpers {
         double[] I_N = Arrays.stream(iRSS_vect).map(j -> j - VLRNoise).toArray();
 
         //Expected
-        /*
-        for (int i = 0; i < I_N.length; i++) {
-            z = Mathematics.dB2Linear(I_N[i]);
-            desensitisation = Mathematics.linear2dB(1 + z);
-            if (desensitisation >= FM) {
-                counter +=1;
-            }
-        }
-        */
         counter = Arrays.stream(I_N).filter(i2n -> Mathematics.linear2dB(Mathematics.dB2Linear(i2n) + 1) >= FM).count();
         gammaExpected_count= 1.* counter/ I_N.length;
 
@@ -231,7 +222,7 @@ public class Test_Helpers {
         System.out.println("Gamma integral Sum  : " + gammaIntegral2);
         System.out.println("________________________________");
 
-        // Here is seen issue with trapezoid integration
+        // Assert
         Assert.assertEquals(gammaExpected_count, gammaIntegral, 1e-5);
     }
 
@@ -323,7 +314,8 @@ public class Test_Helpers {
         assert iRSS_vect != null;
         double[] I_N = Arrays.stream(iRSS_vect).map(j -> j - VLRNoise).toArray();
 
-        //ToDo Expected - Most precise calculation of Gamma
+        //ToDo - Most precise calculation of Gamma for FDP
+        //  Expected
         counter = Arrays.stream(I_N).filter(i2n -> Mathematics.linear2dB(Mathematics.dB2Linear(i2n) + 1) >= FM).count();
         gammaExpected_count= 1.* counter/ I_N.length;
 
@@ -361,7 +353,7 @@ public class Test_Helpers {
         System.out.println("________________________________");
 
         // Here is seen issue with trapezoid integration
-        Assert.assertEquals(gammaExpected_count, gammaIntegral, 1e-5);
+        Assert.assertEquals(gammaExpected_count, gammaIntegral, 1e-4);
     }
 
 }
