@@ -29,8 +29,7 @@ import org.seamcat.model.types.result.*;
 //  @author: Zeljko TABAKOVIC
 //  All rights reserved.
 
-public class DemoEPP_16_FDP
-    implements EventProcessingPlugin<DemoEPP_16_FDP.Input>, EventProcessingPostProcessor<DemoEPP_16_FDP.Input> {
+public class DemoEPP_16_FDP implements EventProcessingPlugin<DemoEPP_16_FDP.Input>, EventProcessingPostProcessor<DemoEPP_16_FDP.Input> {
 
     private double he, hr; // antenna height (m) of Tx and Rx
     private double ht; // terrain height
@@ -38,6 +37,17 @@ public class DemoEPP_16_FDP
     private double d; // path length (km)
     private double longitudeMid, latitudeMid;
     private double noiseFloor;
+
+    // for precise gamma
+    public double getGamma_precise() {
+        return gamma_precise;
+    }
+
+    public void setGamma_precise(double gamma_precise) {
+        this.gamma_precise = gamma_precise;
+    }
+
+    private double gamma_precise;
 
     public interface Input {
         @Config(order = 1, name = "Longitude of VSL path centre", unit = Unit.deg,
@@ -204,6 +214,11 @@ public class DemoEPP_16_FDP
 
         double ATPCRange = (input.atpcRange().isRelevant()) ? input.atpcRange().getValue() : 0;
 
+        // precise calculation of gamma
+        long counter =0;
+        counter = Arrays.stream(I_N).filter(i2n -> Mathematics.linear2dB(Mathematics.dB2Linear(i2n) + 1) >= input.fMargin()-ATPCRange).count();
+        setGamma_precise(1. * counter / I_N.length);
+
         // Calculate FDP & collect all results in map
         Map<String, Double> resultsFDP = calculateFDP(he, hr, ht, frequency, d, input.fMargin(), input.atpcRange().isRelevant(), ATPCRange, input.binNo(), p530v18MultipathFading, pdf_I_N, I_N_bins);
 
@@ -328,6 +343,8 @@ public class DemoEPP_16_FDP
             gamma = integrate(I_N_bins, pdf_I_N, I_N_bins[index], I_N_bins[binNo - 1]);
             I_N_st_dB = Mathematics.linear2dB(Mathematics.dB2Linear(fMargin) - 1);
         }
+
+        // gamma = getGamma_precise();
 
         // applying correction factor
         p0I_LT = p0I_LT + gamma * p00;
