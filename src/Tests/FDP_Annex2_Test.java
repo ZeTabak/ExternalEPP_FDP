@@ -8,6 +8,7 @@ import org.junit.Before;
 import java.io.IOException;
 import java.util.*;
 
+import static Tests.Test_FDP_Annex1.doFDPAssertShort;
 import static main.java.org.seamcat.model.eventprocessing.DemoEPP_16_FDP.*;
 import static Tests.Test_FDP_Annex1.parseCSV;
 
@@ -185,6 +186,290 @@ public class FDP_Annex2_Test {
             // assert
             Test_FDP_Annex1.doFDPAssert(i, expectedResult, result);
         }
+    }
+
+    @Test
+    public void test_FDP_Constant_ATPC() {
+        //Setup
+        double [] lon = new double[] {12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683};
+        double [] lat = new double[] {55.6761, 55.6761, 55.6761, 55.6761, 55.6761, 55.6761 , 55.6761, 55.6761, 55.6761, 55.6761, 55.6761};
+        double [] he = new double[] {20., 20., 20., 20., 20.,20., 20., 20., 20., 20.,20.};
+        double [] hr = new double[] {20., 20., 20., 20., 20.,20., 20., 20., 20., 20.,20.};
+        double [] ht = new double[] {0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
+        double [] f = new double[] {6., 6., 6., 6., 6., 6., 6., 6., 6., 6., 6.};
+        double [] d = new double[] {60., 60., 60., 60., 60., 60., 60., 60., 60., 60., 60.};
+        double [] FM = new double[] {25., 25., 25.,25., 25., 25.,25., 25., 25., 25., 25.};
+        double [] VLRNoise = new double[] {-89.9691, -89.9691, -89.9691, -89.9691,-89.9691,-89.9691, -89.9691, -89.9691, -89.9691,-89.9691,-89.9691};
+        int [] NoBins = new int[] {10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000};
+        double [] ATPC_range = new double[] {15.0, 15.5, 16.0, 16.5, 17.0, 17.5, 18.0, 18.5, 19.0, 19.5, 20.0};
+        boolean ATPC = true;
+
+        double [] FDP_calc = new double[ATPC_range.length];
+        double [] FDP_calc_LT = new double[ATPC_range.length];
+        double [] FDP_calc_ST = new double[ATPC_range.length];
+        double [] iRSS_vect=null;
+
+        try {
+            iRSS_vect = parseCSV("I_Constant.csv");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Map<String, Double> result;
+        // Expected results
+        Map<String, Double[]> expectedResult = new HashMap<>();
+        expectedResult.put("FDP", new Double[] {8.452604489921466, 8.452604489921466, 8.452604489921466, 8.452604489921466, 8.452604489921466, 8.452604489921466, 8.452604489921466, 8.452604489921466, 8.452604489921466, 8.452604489921466, 8.452604489921466});
+        expectedResult.put("FDP_LT", new Double[] {8.452604489921466, 8.452604489921466, 8.452604489921466, 8.452604489921466, 8.452604489921466, 8.452604489921466, 8.452604489921466, 8.452604489921466, 8.452604489921466, 8.452604489921466, 8.452604489921466});
+        expectedResult.put("FDP_ST", new Double[] {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+
+        // getting I/N (Z) of VSL in dB
+        assert iRSS_vect != null;
+        double[] I_N = Arrays.stream(iRSS_vect).map(j -> j - VLRNoise[0]).toArray();
+
+        for (int i = 0; i < lon.length; i++) {
+            // pdf of I/N and bin values dB
+            double[] pdf_I_N = calculatePDF(I_N, NoBins[i]);
+            double[] I_N_bins = calculateBinValues(I_N, NoBins[i]);
+            // Execution
+            P530v18MultipathFading p530v18MultipathFading = new P530v18MultipathFading(lon[i], lat[i]);
+            result = eEPP_FDP.calculateFDP(he[i], hr[i], ht[i], f[i], d[i], FM[i], ATPC, ATPC_range[i], NoBins[i], p530v18MultipathFading, pdf_I_N, I_N_bins);
+
+            FDP_calc[i] = result.get("FDP");
+            FDP_calc_LT[i] = result.get("FDP_LT");
+            FDP_calc_ST[i] = result.get("FDP_ST");
+
+            /*
+            // Printout of detailed results
+            System.out.println("Results iteration " + i + ":");
+            for (Map.Entry<String, Double> entry : result.entrySet()) {
+                System.out.println(entry.getKey() + ": " + entry.getValue());
+            }
+            System.out.println("________________________________");
+             */
+
+            // assert
+            doFDPAssertShort(i, expectedResult, result);
+        }
+        System.out.println("Test Cunstant - ATPC");
+        System.out.println("ATPC_Range (dB) = " + Arrays.toString(ATPC_range));
+        System.out.println("FDP (%) = " + Arrays.toString(FDP_calc));
+        System.out.println("FDP_LT (%) = " + Arrays.toString(FDP_calc_LT));
+        System.out.println("FDP_ST (%) = " + Arrays.toString(FDP_calc_ST));
+        System.out.println("________________________________");
+        System.out.println();
+    }
+
+    @Test
+    public void test_FDP_Triangular_ATPC() {
+        //Setup
+        double [] lon = new double[] {12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683};
+        double [] lat = new double[] {55.6761, 55.6761, 55.6761, 55.6761, 55.6761, 55.6761 , 55.6761, 55.6761, 55.6761, 55.6761, 55.6761};
+        double [] he = new double[] {20., 20., 20., 20., 20.,20., 20., 20., 20., 20.,20.};
+        double [] hr = new double[] {20., 20., 20., 20., 20.,20., 20., 20., 20., 20.,20.};
+        double [] ht = new double[] {0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
+        double [] f = new double[] {6., 6., 6., 6., 6., 6., 6., 6., 6., 6., 6.};
+        double [] d = new double[] {60., 60., 60., 60., 60., 60., 60., 60., 60., 60., 60.};
+        double [] FM = new double[] {25., 25., 25.,25., 25., 25.,25., 25., 25., 25., 25.};
+        double [] VLRNoise = new double[] {-89.9691, -89.9691, -89.9691, -89.9691,-89.9691,-89.9691, -89.9691, -89.9691, -89.9691,-89.9691,-89.9691};
+        int [] NoBins = new int[] {10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000};
+        double [] ATPC_range = new double[] {15.0, 15.5, 16.0, 16.5, 17.0, 17.5, 18.0, 18.5, 19.0, 19.5, 20.0};
+        boolean ATPC = true;
+
+        double [] FDP_calc = new double[ATPC_range.length];
+        double [] FDP_calc_LT = new double[ATPC_range.length];
+        double [] FDP_calc_ST = new double[ATPC_range.length];
+        double [] iRSS_vect=null;
+
+        try {
+            iRSS_vect = parseCSV("I_Triangular.csv");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Map<String, Double> result;
+        // Expected results
+        Map<String, Double[]> expectedResult = new HashMap<>();
+        expectedResult.put("FDP", new Double[] {1.3120241023400592, 1.3120241023400592, 1.3120241023400592, 1.3120241023400592, 1.3120241023400592, 1.3120241023400592, 1.3120241023400592, 1.3120241023400592, 1.3120241023400592, 1.3120241023400592, 1.3120241023400592});
+        expectedResult.put("FDP_LT", new Double[] {1.3120241023400592, 1.3120241023400592, 1.3120241023400592, 1.3120241023400592, 1.3120241023400592, 1.3120241023400592, 1.3120241023400592, 1.3120241023400592, 1.3120241023400592, 1.3120241023400592, 1.3120241023400592});
+        expectedResult.put("FDP_ST", new Double[] {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+
+        // getting I/N (Z) of VSL in dB
+        assert iRSS_vect != null;
+        double[] I_N = Arrays.stream(iRSS_vect).map(j -> j - VLRNoise[0]).toArray();
+
+        for (int i = 0; i < lon.length; i++) {
+            // pdf of I/N and bin values dB
+            double[] pdf_I_N = calculatePDF(I_N, NoBins[i]);
+            double[] I_N_bins = calculateBinValues(I_N, NoBins[i]);
+            // Execution
+            P530v18MultipathFading p530v18MultipathFading = new P530v18MultipathFading(lon[i], lat[i]);
+            result = eEPP_FDP.calculateFDP(he[i], hr[i], ht[i], f[i], d[i], FM[i], ATPC, ATPC_range[i], NoBins[i], p530v18MultipathFading, pdf_I_N, I_N_bins);
+
+            FDP_calc[i] = result.get("FDP");
+            FDP_calc_LT[i] = result.get("FDP_LT");
+            FDP_calc_ST[i] = result.get("FDP_ST");
+
+            /*
+            // Printout of detailed results
+            System.out.println("Results iteration " + i + ":");
+            for (Map.Entry<String, Double> entry : result.entrySet()) {
+                System.out.println(entry.getKey() + ": " + entry.getValue());
+            }
+            System.out.println("________________________________");
+             */
+
+            // assert
+            doFDPAssertShort(i, expectedResult, result);
+        }
+        System.out.println("Test Triangular - ATPC");
+        System.out.println("ATPC_Range (dB) = " + Arrays.toString(ATPC_range));
+        System.out.println("FDP (%) = " + Arrays.toString(FDP_calc));
+        System.out.println("FDP_LT (%) = " + Arrays.toString(FDP_calc_LT));
+        System.out.println("FDP_ST (%) = " + Arrays.toString(FDP_calc_ST));
+        System.out.println("________________________________");
+        System.out.println();
+    }
+
+    @Test
+    public void test_FDP_Uniform_ATPC() {
+        //Setup
+        double [] lon = new double[] {12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683};
+        double [] lat = new double[] {55.6761, 55.6761, 55.6761, 55.6761, 55.6761, 55.6761 , 55.6761, 55.6761, 55.6761, 55.6761, 55.6761};
+        double [] he = new double[] {20., 20., 20., 20., 20.,20., 20., 20., 20., 20.,20.};
+        double [] hr = new double[] {20., 20., 20., 20., 20.,20., 20., 20., 20., 20.,20.};
+        double [] ht = new double[] {0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
+        double [] f = new double[] {6., 6., 6., 6., 6., 6., 6., 6., 6., 6., 6.};
+        double [] d = new double[] {60., 60., 60., 60., 60., 60., 60., 60., 60., 60., 60.};
+        double [] FM = new double[] {25., 25., 25.,25., 25., 25.,25., 25., 25., 25., 25.};
+        double [] VLRNoise = new double[] {-89.9691, -89.9691, -89.9691, -89.9691,-89.9691,-89.9691, -89.9691, -89.9691, -89.9691,-89.9691,-89.9691};
+        int [] NoBins = new int[] {10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000};
+        double [] ATPC_range = new double[] {15.0, 15.5, 16.0, 16.5, 17.0, 17.5, 18.0, 18.5, 19.0, 19.5, 20.0};
+        boolean ATPC = true;
+
+        double [] FDP_calc = new double[ATPC_range.length];
+        double [] FDP_calc_LT = new double[ATPC_range.length];
+        double [] FDP_calc_ST = new double[ATPC_range.length];
+        double [] iRSS_vect=null;
+
+        try {
+            iRSS_vect = parseCSV("I_Uniform.csv");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Map<String, Double> result;
+        // Expected results
+        Map<String, Double[]> expectedResult = new HashMap<>();
+        expectedResult.put("FDP", new Double[] {11.59400350657851, 11.59400350657851, 11.59400350657851, 11.59400350657851, 11.59400350657851, 11.59400350657851, 11.59400350657851, 11.59400350657851, 11.59400350657851, 11.59400350657851, 11.59400350657851});
+        expectedResult.put("FDP_LT", new Double[] {11.59400350657851, 11.59400350657851, 11.59400350657851, 11.59400350657851, 11.59400350657851, 11.59400350657851, 11.59400350657851, 11.59400350657851, 11.59400350657851, 11.59400350657851, 11.59400350657851});
+        expectedResult.put("FDP_ST", new Double[] {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+
+        // getting I/N (Z) of VSL in dB
+        assert iRSS_vect != null;
+        double[] I_N = Arrays.stream(iRSS_vect).map(j -> j - VLRNoise[0]).toArray();
+
+        for (int i = 0; i < lon.length; i++) {
+            // pdf of I/N and bin values dB
+            double[] pdf_I_N = calculatePDF(I_N, NoBins[i]);
+            double[] I_N_bins = calculateBinValues(I_N, NoBins[i]);
+            // Execution
+            P530v18MultipathFading p530v18MultipathFading = new P530v18MultipathFading(lon[i], lat[i]);
+            result = eEPP_FDP.calculateFDP(he[i], hr[i], ht[i], f[i], d[i], FM[i], ATPC, ATPC_range[i], NoBins[i], p530v18MultipathFading, pdf_I_N, I_N_bins);
+
+            FDP_calc[i] = result.get("FDP");
+            FDP_calc_LT[i] = result.get("FDP_LT");
+            FDP_calc_ST[i] = result.get("FDP_ST");
+
+            /*
+            // Printout of detailed results
+            System.out.println("Results iteration " + i + ":");
+            for (Map.Entry<String, Double> entry : result.entrySet()) {
+                System.out.println(entry.getKey() + ": " + entry.getValue());
+            }
+            System.out.println("________________________________");
+             */
+
+            // assert
+            doFDPAssertShort(i, expectedResult, result);
+        }
+        System.out.println("Test Uniform - ATPC");
+        System.out.println("ATPC_Range (dB) = " + Arrays.toString(ATPC_range));
+        System.out.println("FDP (%) = " + Arrays.toString(FDP_calc));
+        System.out.println("FDP_LT (%) = " + Arrays.toString(FDP_calc_LT));
+        System.out.println("FDP_ST (%) = " + Arrays.toString(FDP_calc_ST));
+        System.out.println("________________________________");
+        System.out.println();
+    }
+
+    @Test
+    public void test_FDP_Gaussian_ATPC() {
+        //Setup
+        double [] lon = new double[] {12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683, 12.5683};
+        double [] lat = new double[] {55.6761, 55.6761, 55.6761, 55.6761, 55.6761, 55.6761 , 55.6761, 55.6761, 55.6761, 55.6761, 55.6761};
+        double [] he = new double[] {20., 20., 20., 20., 20.,20., 20., 20., 20., 20.,20.};
+        double [] hr = new double[] {20., 20., 20., 20., 20.,20., 20., 20., 20., 20.,20.};
+        double [] ht = new double[] {0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
+        double [] f = new double[] {6., 6., 6., 6., 6., 6., 6., 6., 6., 6., 6.};
+        double [] d = new double[] {60., 60., 60., 60., 60., 60., 60., 60., 60., 60., 60.};
+        double [] FM = new double[] {25., 25., 25.,25., 25., 25.,25., 25., 25., 25., 25.};
+        double [] VLRNoise = new double[] {-89.9691, -89.9691, -89.9691, -89.9691,-89.9691,-89.9691, -89.9691, -89.9691, -89.9691,-89.9691,-89.9691};
+        int [] NoBins = new int[] {10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000};
+        double [] ATPC_range = new double[] {15.0, 15.5, 16.0, 16.5, 17.0, 17.5, 18.0, 18.5, 19.0, 19.5, 20.0};
+        boolean ATPC = true;
+
+        double [] FDP_calc = new double[ATPC_range.length];
+        double [] FDP_calc_LT = new double[ATPC_range.length];
+        double [] FDP_calc_ST = new double[ATPC_range.length];
+        double [] iRSS_vect=null;
+
+        try {
+            iRSS_vect = parseCSV("I_Gaussian.csv");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Map<String, Double> result;
+        // Expected results
+        Map<String, Double[]> expectedResult = new HashMap<>();
+        expectedResult.put("FDP", new Double[] {101.24567422001167, 109.62586890027194, 120.48049823641149, 130.36969051209056, 139.9807766778897, 152.6428037271236, 165.02801988363794, 176.78633207946177, 195.76996853938147, 210.00832505068385, 230.12792484645365});
+        expectedResult.put("FDP_LT", new Double[] {17.36633618826047, 16.489576896547796, 15.442408268722541, 14.563307148433037, 13.783934774263184, 12.843907007538636, 12.004903204092265, 11.294665151953076, 10.253054243931858, 9.566933943278766, 8.716699231111713});
+        expectedResult.put("FDP_ST", new Double[] {83.87933803175119, 93.13629200372414, 105.03808996768895, 115.80638336365752, 126.19684190362652, 139.79889671958497, 153.02311667954567, 165.4916669275087, 185.5169142954496, 200.44139110740508, 221.41122561534195});
+
+        // getting I/N (Z) of VSL in dB
+        assert iRSS_vect != null;
+        double[] I_N = Arrays.stream(iRSS_vect).map(j -> j - VLRNoise[0]).toArray();
+
+        for (int i = 0; i < lon.length; i++) {
+            // pdf of I/N and bin values dB
+            double[] pdf_I_N = calculatePDF(I_N, NoBins[i]);
+            double[] I_N_bins = calculateBinValues(I_N, NoBins[i]);
+            // Execution
+            P530v18MultipathFading p530v18MultipathFading = new P530v18MultipathFading(lon[i], lat[i]);
+            result = eEPP_FDP.calculateFDP(he[i], hr[i], ht[i], f[i], d[i], FM[i], ATPC, ATPC_range[i], NoBins[i], p530v18MultipathFading, pdf_I_N, I_N_bins);
+
+            FDP_calc[i] = result.get("FDP");
+            FDP_calc_LT[i] = result.get("FDP_LT");
+            FDP_calc_ST[i] = result.get("FDP_ST");
+
+            /*
+            // Printout of detailed results
+            System.out.println("Results iteration " + i + ":");
+            for (Map.Entry<String, Double> entry : result.entrySet()) {
+                System.out.println(entry.getKey() + ": " + entry.getValue());
+            }
+            System.out.println("________________________________");
+             */
+
+            // assert
+            doFDPAssertShort(i, expectedResult, result);
+        }
+        System.out.println("Test Gaussian - ATPC");
+        System.out.println("ATPC_Range (dB) = " + Arrays.toString(ATPC_range));
+        System.out.println("FDP (%) = " + Arrays.toString(FDP_calc));
+        System.out.println("FDP_LT (%) = " + Arrays.toString(FDP_calc_LT));
+        System.out.println("FDP_ST (%) = " + Arrays.toString(FDP_calc_ST));
+        System.out.println("________________________________");
+        System.out.println();
     }
 }
 
