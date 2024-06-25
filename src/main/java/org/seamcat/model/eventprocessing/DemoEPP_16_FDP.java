@@ -39,6 +39,8 @@ public class DemoEPP_16_FDP implements EventProcessingPlugin<DemoEPP_16_FDP.Inpu
     private double noiseFloor;
 
     // for precise gamma
+    private double gamma_precise;
+
     public double getGamma_precise() {
         return gamma_precise;
     }
@@ -47,7 +49,6 @@ public class DemoEPP_16_FDP implements EventProcessingPlugin<DemoEPP_16_FDP.Inpu
         this.gamma_precise = gamma_precise;
     }
 
-    private double gamma_precise;
 
     public interface Input {
         @Config(order = 1, name = "Longitude of VSL path centre", unit = Unit.deg,
@@ -103,7 +104,7 @@ public class DemoEPP_16_FDP implements EventProcessingPlugin<DemoEPP_16_FDP.Inpu
 
     @Override
     public Description description() {
-        return new DescriptionImpl("eEPP 16: FDP - Fractional Degradation of Performance_v1.6_4",
+        return new DescriptionImpl("eEPP 16: FDP - Fractional Degradation of Performance_v1.7",
             "<html>This Event Processing Plugin calculates FDP for FS link with and without ATPC <br>"
                 + "It uses definition of FDP in ITU-R Recommendations F.1108, ITU-R F.758, and <br>"
                 + "calculates the fade probability based on ITU-R P.530-18 method for all percentages <br>"
@@ -113,7 +114,7 @@ public class DemoEPP_16_FDP implements EventProcessingPlugin<DemoEPP_16_FDP.Inpu
                 + "these values are taken from inputs<br>"
                 + "ver 1.0 (Dec 2023) - first implementation of FDP calculations <br>"
                 + "ver 1.5 (Apr 2024) - added terrain feature in calculations and multipath occurrence factor to results, implementation Annex 2 for ATPC<br>"
-                + "ver 1.6_int4 (May 2024) - improvements</html>");
+                + "ver 1.7 (June 2024) - improvement integration of extremities of pdf, geo-climatic bilinear interpolation, p0i_LT for ARPC </html>");
     }
 
     @Override
@@ -228,6 +229,7 @@ public class DemoEPP_16_FDP implements EventProcessingPlugin<DemoEPP_16_FDP.Inpu
                 resultsFDP.getOrDefault("FDP_LT", 0.0) < 0.0 ||
                 resultsFDP.getOrDefault("FDP_ST", 0.0) < 0.0) {
             resultsFDP.replaceAll((key, value) -> Math.max(value, 0.0));
+            test = "False";
         }
 
         // Collecting main results
@@ -326,7 +328,7 @@ public class DemoEPP_16_FDP implements EventProcessingPlugin<DemoEPP_16_FDP.Inpu
         }
         // integration to determine probability of outage from fading and interference p0I, p0I_LT, p0I_ST and
         // change in v1.6
-        //p0I_LT = integrate(I_N_bins, weightedFading, I_N_bins[0], I_N_bins[index]);
+        // p0I_LT = integrate(I_N_bins, weightedFading, I_N_bins[0], I_N_bins[index]);
 
         // Annex 2 - ATPC
         if (ATPCisRelevant) {
@@ -349,6 +351,7 @@ public class DemoEPP_16_FDP implements EventProcessingPlugin<DemoEPP_16_FDP.Inpu
         // applying correction factor
         p0I_LT = p0I_LT + gamma * p00;
         p0I_ST = p0I_ST + (1 - gamma) * p00;
+
         // check equality
         double pOI_ST_2=p00+gamma*(1-p00);
 
@@ -393,7 +396,7 @@ public class DemoEPP_16_FDP implements EventProcessingPlugin<DemoEPP_16_FDP.Inpu
         for (Double value : data) {
             int binIndex = (int) Math.floor((value - min) / binWidth);
             binIndex = (binIndex >= numBins) ? numBins - 1 : binIndex;
-            binIndex = Math.max(binIndex, 0);
+            binIndex = (binIndex <= 0) ? 0 : binIndex;
             pdf[binIndex]++;
         }
 
@@ -418,8 +421,8 @@ public class DemoEPP_16_FDP implements EventProcessingPlugin<DemoEPP_16_FDP.Inpu
 
         // Calculate bin width
         // results in negative fdp and integrate(I_N_bins, pdf_I_N, I_N_bins[0], I_N_bins[input.binNo() - 1]) < 1
-        //double binWidth = (max - min) / numBins;
-        //correction
+        // double binWidth = (max - min) / numBins;
+        // correction
         double binWidth = (max - min) / (numBins-1);
 
         // Generate the bin values
